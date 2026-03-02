@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -236,10 +236,10 @@
   <div id="login-screen">
     <div class="login-card">
       <h1>🤖 Copilot CLI</h1>
-      <p class="subtitle">Terminale remoto sicuro</p>
+      <p class="subtitle">Secure remote terminal</p>
       <form id="login-form">
         <input type="password" id="password" placeholder="Password" autocomplete="current-password" required>
-        <button type="submit" id="login-btn">Accedi</button>
+        <button type="submit" id="login-btn">Login</button>
       </form>
       <p class="error-msg" id="error-msg"></p>
     </div>
@@ -249,7 +249,7 @@
   <div id="terminal-screen">
     <div id="header">
       <span class="title">🤖 Copilot CLI</span>
-      <span id="status" class="status">● Connesso</span>
+      <span id="status" class="status">● Connected</span>
       <button class="header-btn" id="logout-btn" title="Logout">⏻</button>
     </div>
     <div id="terminal-container">
@@ -297,7 +297,7 @@
 
     function setStatus(connected) {
       const el = document.getElementById('status');
-      el.textContent = connected ? '● Connesso' : '● Disconnesso';
+      el.textContent = connected ? '● Connected' : '● Disconnected';
       el.className = 'status' + (connected ? '' : ' disconnected');
     }
 
@@ -324,10 +324,10 @@
           sessionStorage.setItem('token', token);
           showTerminal();
         } else {
-          errEl.textContent = data.error || 'Errore di login';
+          errEl.textContent = data.error || 'Login error';
         }
       } catch (err) {
-        errEl.textContent = 'Errore di connessione';
+        errEl.textContent = 'Connection error';
       } finally {
         btn.disabled = false;
       }
@@ -420,7 +420,7 @@
           const msg = JSON.parse(e.data);
           if (msg.type === 'output') term.write(msg.data);
           if (msg.type === 'exit') {
-            toast('Sessione terminale chiusa');
+            toast('Terminal session closed');
             setStatus(false);
           }
           if (msg.type === 'error') toast(msg.data, 4000);
@@ -435,7 +435,7 @@
           token = null;
           document.getElementById('terminal-screen').style.display = 'none';
           document.getElementById('login-screen').style.display = 'flex';
-          toast('Sessione scaduta');
+          toast('Session expired');
           return;
         }
         // Auto-reconnect
@@ -497,7 +497,7 @@
 
     // --- Logout ---
     document.getElementById('logout-btn').addEventListener('click', () => {
-      if (confirm('Disconnettersi?')) {
+      if (confirm('Disconnect?')) {
         sessionStorage.removeItem('token');
         token = null;
         if (ws) ws.close();

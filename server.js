@@ -63,7 +63,7 @@ function checkRateLimit(ip) {
 app.post('/api/login', (req, res) => {
   const ip = req.ip;
   if (!checkRateLimit(ip)) {
-    return res.status(429).json({ error: 'Troppi tentativi. Riprova tra un minuto.' });
+    return res.status(429).json({ error: 'Too many attempts. Try again in a minute.' });
   }
 
   const attempts = loginAttempts.get(ip) || [];
@@ -71,7 +71,7 @@ app.post('/api/login', (req, res) => {
   loginAttempts.set(ip, attempts);
 
   const { password } = req.body;
-  if (!password) return res.status(401).json({ error: 'Password richiesta' });
+  if (!password) return res.status(401).json({ error: 'Password required' });
 
   const inputHash = crypto.createHash('sha256').update(String(password)).digest();
   const expectedHash = crypto.createHash('sha256').update(PASSWORD).digest();
@@ -81,7 +81,7 @@ app.post('/api/login', (req, res) => {
     sessions.set(token, { created: Date.now(), ip });
     res.json({ token });
   } else {
-    res.status(401).json({ error: 'Password non valida' });
+    res.status(401).json({ error: 'Invalid password' });
   }
 });
 
@@ -225,6 +225,6 @@ server.listen(PORT, HOST, () => {
   console.log(`  Local:   http://localhost:${PORT}`);
   console.log(`  Network: http://${ip}:${PORT}`);
   console.log('');
-  console.log('  Apri questo URL sul telefono (stessa rete WiFi)');
+  console.log('  Open this URL on your phone (same WiFi network)');
   console.log('');
 });

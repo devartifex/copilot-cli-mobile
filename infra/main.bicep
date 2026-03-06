@@ -43,6 +43,8 @@ module containerRegistry './modules/container-registry.bicep' = {
   }
 }
 
+param containerAppImage string = ''
+
 module containerApps './modules/container-apps.bicep' = {
   name: 'container-apps'
   scope: rg
@@ -52,6 +54,7 @@ module containerApps './modules/container-apps.bicep' = {
     tags: tags
     containerRegistryName: containerRegistry.outputs.name
     environmentName: '${abbrs.containerAppsEnvironment}${resourceToken}'
+    image: empty(containerAppImage) ? 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' : containerAppImage
     azureClientId: azureClientId
     azureTenantId: azureTenantId
     azureClientSecret: azureClientSecret

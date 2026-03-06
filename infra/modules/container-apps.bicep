@@ -7,6 +7,7 @@ param location string
 param tags object = {}
 param containerRegistryName string
 param environmentName string
+param image string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 @secure()
 param azureClientId string
@@ -75,7 +76,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
       containers: [
         {
           name: 'copilot-cli-web'
-          image: '${containerRegistry.properties.loginServer}/${name}:latest'
+          image: image
           env: [
             { name: 'NODE_ENV', value: 'production' }
             { name: 'PORT', value: '3000' }

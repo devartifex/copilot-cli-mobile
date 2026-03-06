@@ -71,18 +71,20 @@ You need two registrations: one in Azure AD and one on GitHub.
 >
 > **Manual**: See [Azure Setup Guide](./docs/azure-setup.md#1-azure-ad-app-registration-microsoft-entra-id) for step-by-step portal instructions.
 
-#### GitHub OAuth App — Device Flow (no redirect URI needed)
+#### GitHub OAuth App — 30-second setup, no secret needed
 
-The app uses [GitHub Device Authorization Flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow) — the same flow used by `gh auth login`. Each user authenticates interactively from the app UI, using their own GitHub account (personal or work/org).
+The app uses [GitHub Device Authorization Flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow) — the same flow as `gh auth login`. Users authenticate interactively from the app UI by entering a short code on GitHub. The OAuth App registration is only needed to obtain a `client_id`; **no client secret, no redirect URI, and no server-side GitHub credentials** are ever required.
 
 1. Go to [GitHub → Settings → Developer settings → OAuth Apps](https://github.com/settings/developers)
-2. Click **New OAuth App**
-3. Set:
+2. Click **New OAuth App** and fill in:
    - **Application name**: `Copilot CLI Web`
-   - **Homepage URL**: `http://localhost:3000`
-   - **Authorization callback URL**: `http://localhost:3000` (device flow doesn't use a callback)
-4. Note the **Client ID** → `GITHUB_CLIENT_ID`
-5. **No Client Secret needed** for device flow
+   - **Homepage URL**: any valid URL (e.g. `http://localhost:3000`)
+   - **Authorization callback URL**: same as above — device flow never uses it
+3. Click **Register application**
+4. Copy the **Client ID** → `GITHUB_CLIENT_ID`
+5. **Stop here** — no need to generate a client secret
+
+> **Why register at all?** GitHub requires a `client_id` to identify which application is initiating the device flow. It's the same reason `gh` ships with a built-in client ID. The registration takes ~30 seconds and **never needs to be updated** when the app URL changes.
 
 ### 3. Set Environment Variables
 
@@ -96,12 +98,10 @@ Edit `.env`:
 AZURE_CLIENT_ID=<from-azure-app-registration>
 AZURE_TENANT_ID=<from-azure-portal>
 AZURE_CLIENT_SECRET=<from-azure-app-registration>
-GITHUB_CLIENT_ID=<from-github-oauth-app>
+GITHUB_CLIENT_ID=<from-github-oauth-app>   # just the ID, no secret
 SESSION_SECRET=<run: openssl rand -hex 32>
 BASE_URL=http://localhost:3000
 ```
-
-> No `GITHUB_CLIENT_SECRET` needed — device flow only requires the client ID.
 
 ### 4. Run Locally
 
@@ -109,7 +109,7 @@ BASE_URL=http://localhost:3000
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — sign in with Microsoft, then connect GitHub by entering a short code. The chat is ready.
+Open [http://localhost:3000](http://localhost:3000) — sign in with Microsoft, then connect GitHub by entering a short code at `github.com/login/device`. The chat is ready.
 
 ## Deployment
 

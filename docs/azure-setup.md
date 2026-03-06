@@ -55,10 +55,12 @@ After deploying to Azure, return to the app registration and add a second redire
 
 The app uses [GitHub Device Authorization Flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow) — the same interactive flow used by `gh auth login`. This means:
 
-- **No redirect URI required** — the server never needs to receive a callback
-- **No client secret required** — device flow only needs the client ID
+- **No redirect URI required** — the server never receives a callback
+- **No client secret required** — device flow only needs the `client_id`
 - **Works for personal and work accounts** — each user logs in as themselves, giving Copilot access to their own repos and license
 - **Supports GitHub org SSO** — logging in with a work account automatically includes SSO-authorized org repos
+
+> **Why register an OAuth App at all?** GitHub requires a `client_id` to identify which application is initiating the device flow — without it, GitHub has no way to show the user which app is requesting access. It's the same reason `gh` ships with a built-in client ID. The registration is a one-time, ~30-second step that never needs to be repeated.
 
 ### Create the OAuth App
 
@@ -66,20 +68,15 @@ The app uses [GitHub Device Authorization Flow](https://docs.github.com/en/apps/
 2. Click **New OAuth App**
 3. Fill in:
    - **Application name**: `Copilot CLI Web`
-   - **Homepage URL**: `http://localhost:3000`
-   - **Authorization callback URL**: `http://localhost:3000` (device flow does not use this — any valid URL is fine)
+   - **Homepage URL**: any valid URL — e.g. `http://localhost:3000`
+   - **Authorization callback URL**: same as above — device flow never redirects here
 4. Click **Register application**
-5. Note the **Client ID** → `GITHUB_CLIENT_ID`
-
-> ✅ **No client secret needed.** GitHub device flow only requires the client ID. Do not generate one.
+5. Copy the **Client ID** → `GITHUB_CLIENT_ID`
+6. **Stop here** — do not generate a client secret
 
 ### Update for Production
 
-After deploying, update only the **Homepage URL** field:
-
-- **Homepage URL**: `https://<your-container-app-fqdn>`
-
-The callback URL is irrelevant for device flow, so no update is needed there.
+After deploying, you can optionally update the **Homepage URL** to your production FQDN. Nothing else needs changing — no callback URL to update, ever.
 
 ---
 

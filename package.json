@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts",
+    "dev": "docker compose up --build",
+    "dev:local": "tsx watch src/index.ts",
+    "dev:down": "docker compose down",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist"
   },

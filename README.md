@@ -3,7 +3,7 @@
 > **Chat with GitHub Copilot from any browser** — a secure, self-hosted web app powered by the official [GitHub Copilot SDK](https://github.com/github/copilot-sdk).
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Node.js-20%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 20+">
+  <img src="https://img.shields.io/badge/Node.js-22%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22+">
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Azure_Container_Apps-Consumption-0078D4?logo=microsoftazure&logoColor=white" alt="Azure Container Apps">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License">
@@ -62,7 +62,7 @@ Browser (mobile / desktop)         Azure Container Apps
 
 ### Prerequisites
 
-- **Node.js 20+** — required by `@github/copilot-sdk`
+- **Node.js 22+** — required by `@github/copilot-sdk`
 - **GitHub account** with an active [Copilot license](https://github.com/features/copilot#pricing) (free tier works)
 - **Azure subscription** — for deployment ([free account](https://azure.microsoft.com/free/))
 - **Azure CLI** (`az`) — [install guide](https://docs.microsoft.com/cli/azure/install-azure-cli)
@@ -118,10 +118,24 @@ SESSION_SECRET=<run: openssl rand -hex 32>
 BASE_URL=http://localhost:3000
 ```
 
-### 4. Run Locally
+### 4. Run With Docker (Default)
 
 ```bash
 npm run dev
+```
+
+This runs `docker compose up --build`.
+
+To stop containers:
+
+```bash
+npm run dev:down
+```
+
+### 5. Run Directly On Host (Optional)
+
+```bash
+npm run dev:local
 ```
 
 Open [http://localhost:3000](http://localhost:3000) — sign in with Microsoft, then connect GitHub by entering a short code at `github.com/login/device`. The chat is ready.

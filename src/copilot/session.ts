@@ -1,6 +1,5 @@
 import { CopilotClient } from '@github/copilot-sdk';
 import type { PermissionRequest, PermissionRequestResult, PermissionHandler } from '@github/copilot-sdk';
-import { config } from '../config.js';
 
 const APP_SYSTEM_MESSAGE = [
   'You are Copilot CLI Web, an assistant running inside this web app.',
@@ -9,90 +8,27 @@ const APP_SYSTEM_MESSAGE = [
   'Do not refuse GitHub-related requests unless a real permission or tool error occurs.',
 ].join(' ');
 
-// Only approve read-only requests; deny shell, write, and unknown custom tools.
-// In development, also deny GitHub tools to avoid auth issues
-const approveReadOnly: PermissionHandler = (request: PermissionRequest): PermissionRequestResult => {
-  if (process.env.NODE_ENV !== 'production') {
-    // Deny any tool with "github" in the name in development
-    if (typeof request.toolName === 'string' && request.toolName.toLowerCase().includes('github')) {
-      if (process.env.DEBUG_COPILOT) console.log(`[Permission] Denied GitHub tool in development:`, request.toolName);
-      return { kind: 'denied-by-rules' };
-    }
-  }
-  
-  if (request.kind === 'read' || request.kind === 'url') {
-    return { kind: 'approved' };
-  }
-  if (request.kind === 'mcp') {
-    const tool = (typeof request.toolName === 'string' ? request.toolName : '').toLowerCase();
-    const readOnlyPatterns = [
-      'list', 'get', 'search', 'read', 'fetch', 'describe', 'show', 'count', 'find',
-    ];
-    if (readOnlyPatterns.some((p) => tool.includes(p))) {
-      return { kind: 'approved' };
-    }
-  }
-  return { kind: 'denied-by-rules' };
+// Approve all tool requests — match the desktop Copilot CLI behaviour.
+const approveAll: PermissionHandler = (_request: PermissionRequest): PermissionRequestResult => {
+  return { kind: 'approved' };
 };
-
-// Optional: if a GitHub MCP server package is installed locally, use it to give Copilot
-// GitHub API tools (list repos, read files, create PRs, etc.).
-// The official GitHub MCP server (https://github.com/github/github-mcp-server) is a Go
-// binary and not yet available as an npm package. As a drop-in alternative you can install:
-//   npm install @modelcontextprotocol/server-github
-// Note: that package is deprecated — use it at your own risk until GitHub ships an npm release.
-let hasWarnedMissingGitHubMcp = false;
-
-function resolveGitHubMcpServer(): { command: string; args: string[] } | null {
-  try {
-    const main = import.meta.resolve('@modelcontextprotocol/server-github');
-    if (!main) return null;
-    const resolved = main.startsWith('file://') ? new URL(main).pathname : main;
-    return { command: 'node', args: [resolved] };
-  } catch (err: any) {
-    if (!hasWarnedMissingGitHubMcp) {
-      console.warn('GitHub MCP server not available:', err.message);
-      hasWarnedMissingGitHubMcp = true;
-    }
-    return null; // Package not installed — Copilot runs without GitHub API tools
-  }
-}
 
 export async function createCopilotSession(
   client: CopilotClient,
-  githubToken?: string,
   model?: string
 ) {
   try {
     if (process.env.DEBUG_COPILOT) console.log(`[Session] Creating Copilot session with model: ${model || 'gpt-4.1'}`);
-    
-    const shouldEnableGitHubMcp = config.enableGitHubMcp && !!githubToken;
-    const mcpServer = shouldEnableGitHubMcp ? resolveGitHubMcpServer() : null;
-    
-    if (process.env.DEBUG_COPILOT) console.log(`[Session] GitHub MCP enabled: ${!!mcpServer}`);
 
-    const sessionConfig: Parameters<typeof client.createSession>[0] = {
+    const session = await client.createSession({
       model: model || 'gpt-4.1',
       streaming: true,
       systemMessage: {
         mode: 'append',
         content: APP_SYSTEM_MESSAGE,
       },
-      onPermissionRequest: approveReadOnly,
-    };
-
-    if (mcpServer && githubToken) {
-      if (process.env.DEBUG_COPILOT) console.log(`[Session] Configuring GitHub MCP server`);
-      (sessionConfig as any).mcpServers = {
-        github: {
-          command: mcpServer.command,
-          args: mcpServer.args,
-          env: { GITHUB_PERSONAL_ACCESS_TOKEN: githubToken },
-        },
-      };
-    }
-
-    const session = await client.createSession(sessionConfig);
+      onPermissionRequest: approveAll,
+    });
     return session;
   } catch (err: any) {
     console.error('Failed to create Copilot session:', err.message);

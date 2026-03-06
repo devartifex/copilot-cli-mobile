@@ -4,7 +4,7 @@ const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const GITHUB_API_URL = 'https://api.github.com';
 
-// copilot: Copilot API access; read:user: display name/avatar; repo: GitHub MCP tools
+// copilot: Copilot API access; read:user: display name/avatar; repo: SDK built-in tools
 const GITHUB_SCOPES = 'copilot read:user repo';
 
 export interface DeviceCodeResponse {

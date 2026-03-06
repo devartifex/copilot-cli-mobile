@@ -12,8 +12,6 @@ export const config = {
   baseUrl: required('BASE_URL'),
   sessionSecret: required('SESSION_SECRET'),
   sessionStorePath: process.env.SESSION_STORE_PATH || '.sessions',
-  // Disable GitHub MCP in development to avoid auth issues; enable only in production with proper config
-  enableGitHubMcp: process.env.NODE_ENV === 'production' && process.env.ENABLE_GITHUB_MCP === 'true',
   azure: {
     clientId: required('AZURE_CLIENT_ID'),
     tenantId: required('AZURE_TENANT_ID'),

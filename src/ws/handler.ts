@@ -73,7 +73,7 @@ export function setupWebSocket(
             try {
               if (process.env.DEBUG_COPILOT) console.log(`[WS] Creating Copilot session for user`);
               const client = await getCopilotClient(sessionId, githubToken);
-              copilotSession = await createCopilotSession(client, githubToken, msg.model);
+              copilotSession = await createCopilotSession(client, msg.model);
 
               if (process.env.DEBUG_COPILOT) console.log(`[WS] Attaching event listeners to session`);
               copilotSession.on(

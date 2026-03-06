@@ -206,37 +206,11 @@ Two workflows are included:
 | `PORT` | ❌ | `3000` | HTTP server port |
 | `NODE_ENV` | ❌ | `development` | Set to `production` for secure cookies + trust proxy |
 
-## GitHub MCP Tools (Optional)
-
-The Copilot CLI does not include GitHub API tools by default — the GitHub token is used only for Copilot authentication. To give Copilot tools like "read file from repo", "create PR", etc., you need a GitHub MCP server.
-
-The app is wired to automatically pick up a GitHub MCP server if one is installed. GitHub's [official MCP server](https://github.com/github/github-mcp-server) is a Go binary (not an npm package). As a Node.js-based alternative you can install the community package:
-
-```bash
-npm install @modelcontextprotocol/server-github
-```
-
-> ⚠️ That package is currently deprecated. Use it at your own risk — or wait for GitHub to ship a stable npm release.
-
-Once installed, the app detects it automatically and passes the user's token to it. Copilot then gains these tools:
-
-| Tool | What Copilot can do |
-|------|---------------------|
-| `list_repositories` | List repos (personal or org) |
-| `get_file_contents` | Read any file from a repo |
-| `search_code` | Search code across repos |
-| `list_issues` / `create_issue` | View and create GitHub issues |
-| `list_pull_requests` / `create_pull_request` | View and open PRs |
-| `get_pull_request` / `merge_pull_request` | Inspect and merge PRs |
-| `push_files` | Commit and push file changes |
-
-> The tools automatically scope to the authenticated user's account — personal repos for personal login, org repos for work/SSO login.
-
 ## Security
 
 This app is designed with security as a first-class concern:
 
-- **No shell access** — the server only exposes the Copilot SDK API; there is no way to run arbitrary commands
+- **Full Copilot CLI parity** — all SDK built-in tools (GitHub API, file access, shell) are approved, matching the desktop Copilot CLI experience
 - **Azure AD (OIDC + PKCE)** — enterprise-grade authentication with proof key for code exchange
 - **Refresh tokens** — MSAL token cache enables automatic silent renewal (~90 day sessions with zero re-logins)
 - **Server-side token storage** — the GitHub OAuth token is stored in the Express session and never sent to the browser

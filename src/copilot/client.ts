@@ -30,16 +30,12 @@ export async function getCopilotClient(
   const clientConfig: any = {
     githubToken,
     useLoggedInUser: false,
-    // Disable VSCode integration to use SDK standalone
-    useVscodeIntegration: false,
+    // Pass the GitHub token as GH_TOKEN so the CLI's built-in tools
+    // (github_api, search_code, etc.) can access the GitHub API.
+    env: { ...process.env, GH_TOKEN: githubToken },
   };
   
-  // Try to disable VSCode integration
-  if (process.env.DISABLE_VSCODE_INTEGRATION !== 'false') {
-    clientConfig.vscodeIntegration = false;
-  }
-  
-  if (process.env.DEBUG_COPILOT) console.log(`[Copilot] Client config:`, { useLoggedInUser: clientConfig.useLoggedInUser, vscodeIntegration: clientConfig.vscodeIntegration });
+  if (process.env.DEBUG_COPILOT) console.log(`[Copilot] Client config:`, { useLoggedInUser: clientConfig.useLoggedInUser });
   
   try {
     client = new CopilotClient(clientConfig);

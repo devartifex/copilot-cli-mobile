@@ -1,7 +1,7 @@
 {
   "name": "copilot-cli-web",
   "version": "2.0.0",
-  "description": "GitHub Copilot CLI as a web app — Azure AD + GitHub OAuth + Copilot SDK",
+  "description": "GitHub Copilot CLI from mobile — GitHub OAuth + Copilot SDK",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -15,8 +15,7 @@
   "keywords": [
     "copilot",
     "cli",
-    "web",
-    "azure",
+    "mobile",
     "github",
     "oauth"
   ],
@@ -27,7 +26,6 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
-    "@azure/msal-node": "^3.5.0",
     "@github/copilot-sdk": "^0.1.30",
     "dotenv": "^16.4.0",
     "express": "^4.21.0",

@@ -9,18 +9,11 @@ function required(name: string): string {
 
 export const config = {
   port: parseInt(process.env.PORT || '3000'),
-  baseUrl: required('BASE_URL'),
+  baseUrl: process.env.BASE_URL || 'http://localhost:3000',
   sessionSecret: required('SESSION_SECRET'),
   sessionStorePath: process.env.SESSION_STORE_PATH || '.sessions',
-  azure: {
-    clientId: required('AZURE_CLIENT_ID'),
-    tenantId: required('AZURE_TENANT_ID'),
-    clientSecret: required('AZURE_CLIENT_SECRET'),
-    get redirectUri() { return `${config.baseUrl}/auth/callback`; },
-  },
   github: {
     clientId: required('GITHUB_CLIENT_ID'),
-    // No client secret needed — device flow only requires client_id
   },
   isDev: process.env.NODE_ENV !== 'production',
 };

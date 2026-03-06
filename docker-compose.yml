@@ -9,8 +9,6 @@ services:
       - NODE_ENV=development
       - BASE_URL=http://localhost:3000
       - SESSION_STORE_PATH=/tmp/.sessions
-      - HOME=/home/node
     volumes:
       - ./public:/app/public:ro
-      - ${HOME}/.config/gh:/home/node/.config/gh:ro
     restart: unless-stopped

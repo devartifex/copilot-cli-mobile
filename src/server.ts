@@ -53,14 +53,13 @@ const sessionMiddleware = session({
     httpOnly: true,
     secure: !config.isDev,
     sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   },
 });
 
 app.use(sessionMiddleware);
 app.use(express.json());
 
-// Trust proxy in production (Azure Container Apps)
 if (!config.isDev) {
   app.set('trust proxy', 1);
 }
@@ -75,7 +74,7 @@ app.use('/api', apiRoutes);
 // Static files
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// SPA fallback — serve index.html for non-API routes
+// SPA fallback
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });

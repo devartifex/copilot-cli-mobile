@@ -8,7 +8,7 @@ setupWebSocket(server, sessionMiddleware);
 
 server.listen(config.port, () => {
   console.log('');
-  console.log('  🤖 Copilot CLI Web');
+  console.log('  Copilot CLI Mobile');
   console.log('  ──────────────────');
   console.log(`  Mode:  ${config.isDev ? 'Development' : 'Production'}`);
   console.log(`  URL:   ${config.baseUrl}`);

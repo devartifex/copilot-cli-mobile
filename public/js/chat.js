@@ -38,7 +38,7 @@ const Chat = {
     this.ws.onclose = (e) => {
       this.setStatus('disconnected');
       if (e.code === 4001) {
-        Auth.login();
+        window.location.reload();
         return;
       }
       this.reconnectTimer = setTimeout(() => this.connect(), this.reconnectDelay);

@@ -35,8 +35,8 @@ html, body {
   height: 100dvh;
 }
 
-/* ===== LOGIN ===== */
-#login-screen {
+/* ===== LOGIN / DEVICE FLOW ===== */
+#github-screen {
   display: flex;
   align-items: center;
   justify-content: center;

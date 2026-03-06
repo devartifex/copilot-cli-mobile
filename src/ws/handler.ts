@@ -1,8 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server, IncomingMessage } from 'http';
-import { getCopilotClient, destroyCopilotClient } from '../copilot/client.js';
+import { createCopilotClient } from '../copilot/client.js';
 import { createCopilotSession, getAvailableModels } from '../copilot/session.js';
-import { config } from '../config.js';
 
 type SessionMiddleware = (req: any, res: any, next: () => void) => void;
 
@@ -22,25 +21,19 @@ export function setupWebSocket(
   const wss = new WebSocketServer({ server, path: '/ws' });
 
   wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
-    // Parse Express session from upgrade request cookies
-    const fakeRes = {
-      setHeader: () => fakeRes,
-      getHeader: () => undefined,
-      end: () => {},
-    } as any;
-
+    // Extract Express session from the upgrade request
     await new Promise<void>((resolve) => {
-      sessionMiddleware(req, fakeRes, resolve);
+      sessionMiddleware(req, {} as any, resolve);
     });
 
     const session = (req as any).session;
-    if (!session?.azureAccount || !session?.githubToken) {
+    if (!session?.githubToken) {
       ws.close(4001, 'Unauthorized');
       return;
     }
 
     const githubToken: string = session.githubToken;
-    const sessionId: string = session.id;
+    const client = createCopilotClient(githubToken);
     let copilotSession: any = null;
 
     const cleanup = async () => {
@@ -48,7 +41,7 @@ export function setupWebSocket(
         try { copilotSession.removeAllListeners?.(); } catch { /* ignore */ }
         copilotSession = null;
       }
-      await destroyCopilotClient(sessionId);
+      try { await client.stop(); } catch { /* ignore */ }
     };
 
     ws.on('close', () => { cleanup(); });
@@ -64,22 +57,17 @@ export function setupWebSocket(
 
         switch (msg.type) {
           case 'new_session': {
-            // Destroy previous session before creating a new one
             if (copilotSession) {
               try { copilotSession.removeAllListeners?.(); } catch { /* ignore */ }
               copilotSession = null;
             }
 
             try {
-              if (process.env.DEBUG_COPILOT) console.log(`[WS] Creating Copilot session for user`);
-              const client = await getCopilotClient(sessionId, githubToken);
               copilotSession = await createCopilotSession(client, msg.model);
 
-              if (process.env.DEBUG_COPILOT) console.log(`[WS] Attaching event listeners to session`);
               copilotSession.on(
                 'assistant.message_delta',
                 (event: any) => {
-                  if (process.env.DEBUG_COPILOT) console.log(`[WS] Received delta chunk:`, event.data.deltaContent.substring(0, 50));
                   send(ws, {
                     type: 'delta',
                     content: event.data.deltaContent,
@@ -87,14 +75,12 @@ export function setupWebSocket(
                 }
               );
 
-              if (process.env.DEBUG_COPILOT) console.log(`[WS] Session created successfully, sending confirmation`);
               send(ws, { type: 'session_created', model: msg.model });
-            } catch (sessionErr: any) {
-              console.error('Session creation error:', sessionErr.message);
-              if (process.env.DEBUG_COPILOT) console.error('[WS] Full error stack:', sessionErr.stack);
+            } catch (err: any) {
+              console.error('Session creation error:', err.message);
               send(ws, {
                 type: 'error',
-                message: `Failed to create session: ${sessionErr.message}`,
+                message: `Failed to create session: ${err.message}`,
               });
             }
             break;
@@ -112,26 +98,21 @@ export function setupWebSocket(
               return;
             }
 
-            if (process.env.DEBUG_COPILOT) console.log(`[WS] Sending message to session:`, content.substring(0, 50));
             await copilotSession.sendAndWait({ prompt: content });
-            if (process.env.DEBUG_COPILOT) console.log(`[WS] Message processing complete`);
             send(ws, { type: 'done' });
             break;
           }
 
           case 'list_models': {
-            const client = await getCopilotClient(sessionId, githubToken);
             const models = await getAvailableModels(client);
-            // Ensure models is always an array before sending
             const modelArray = Array.isArray(models) ? models : [];
             send(ws, { type: 'models', models: modelArray });
             break;
           }
         }
       } catch (err: any) {
-        console.error('WS message error:', err);
-        console.error('Error stack:', err.stack);
-        send(ws, { type: 'error', message: `An internal error occurred: ${err.message}` });
+        console.error('WS message error:', err.message);
+        send(ws, { type: 'error', message: 'An internal error occurred' });
       }
     });
 

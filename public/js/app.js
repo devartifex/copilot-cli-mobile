@@ -1,25 +1,8 @@
-// App entry point — drives multi-step auth and chat initialization
+// App entry point — GitHub device flow auth then chat
 (async function init() {
   const status = await Auth.checkStatus();
 
-  if (!status.azureAuthenticated) {
-    // If we haven't tried SSO yet, attempt silent login first
-    const params = new URLSearchParams(window.location.search);
-    if (!params.has('sso')) {
-      // Redirect to silent SSO — Azure AD will auto-login if browser session exists
-      window.location.href = '/auth/sso';
-      return;
-    }
-    // SSO failed or not available — show the login button
-    showScreen('login-screen');
-    document.getElementById('login-btn').addEventListener('click', () => {
-      window.location.href = '/auth/login';
-    });
-    return;
-  }
-
   if (!status.authenticated) {
-    // Azure AD done; GitHub Copilot authorization needed
     showScreen('github-screen');
     await runDeviceFlow();
     return;
@@ -30,7 +13,7 @@
 })();
 
 function showScreen(id) {
-  ['login-screen', 'github-screen', 'chat-screen'].forEach((s) => {
+  ['github-screen', 'chat-screen'].forEach((s) => {
     document.getElementById(s).style.display = s === id ? 'flex' : 'none';
   });
 }

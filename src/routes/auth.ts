@@ -1,107 +1,16 @@
 import { Router } from 'express';
-import crypto from 'crypto';
-import { getAuthUrl, handleCallback } from '../auth/azure.js';
 import {
   requestDeviceCode,
   pollForToken,
   validateGitHubToken,
 } from '../auth/github.js';
 
-function sanitizeReturnTo(path?: string): string {
-  if (!path || typeof path !== 'string') return '/';
-  // Only allow relative paths starting with / and not // (prevents protocol-relative open redirects)
-  if (!path.startsWith('/') || path.startsWith('//')) return '/';
-  return path;
-}
-
 const router = Router();
 
-// Azure AD login
-router.get('/login', async (req, res) => {
-  try {
-    const state = crypto.randomBytes(32).toString('hex');
-    req.session.authState = state;
-    const loginHint = req.session.azureAccount?.username;
-    const { url, verifier } = await getAuthUrl(state, loginHint);
-    req.session.pkceVerifier = verifier;
-    res.redirect(url);
-  } catch (err) {
-    console.error('Azure login error:', err);
-    res.status(500).send('Login failed');
-  }
-});
-
-// Silent SSO — tries prompt=none; if Azure AD has an active browser session, logs in automatically
-router.get('/sso', async (req, res) => {
-  try {
-    const state = 'sso:' + crypto.randomBytes(32).toString('hex');
-    req.session.authState = state;
-    const { url, verifier } = await getAuthUrl(state, undefined, true);
-    req.session.pkceVerifier = verifier;
-    res.redirect(url);
-  } catch (err) {
-    console.error('SSO attempt error:', err);
-    res.redirect('/?sso=failed');
-  }
-});
-
-// Azure AD callback
-router.get('/callback', async (req, res) => {
-  const { code, state, error } = req.query;
-
-  // Handle Azure AD error responses (e.g. interaction_required from silent SSO)
-  if (error) {
-    if ((state as string)?.startsWith('sso:')) {
-      delete req.session.authState;
-      delete req.session.pkceVerifier;
-      return res.redirect('/?sso=failed');
-    }
-    console.error('Azure AD callback error:', error, req.query.error_description);
-    return res.status(403).send('Authentication failed');
-  }
-
-  if (!code || state !== req.session.authState) {
-    return res.status(403).send('Invalid state parameter');
-  }
-
-  try {
-    const result = await handleCallback(code as string, req.session.pkceVerifier!);
-    req.session.azureAccount = {
-      homeAccountId: result.account!.homeAccountId,
-      username: result.account!.username,
-      name: result.account!.name ?? undefined,
-    };
-    const wasSso = req.session.authState?.startsWith('sso:');
-    delete req.session.authState;
-    delete req.session.pkceVerifier;
-
-    // If GitHub token already in session, proceed to app; otherwise the UI will trigger device flow
-    if (req.session.githubToken) {
-      const returnTo = sanitizeReturnTo(req.session.returnTo);
-      delete req.session.returnTo;
-      return res.redirect(returnTo);
-    }
-
-    res.redirect('/');
-  } catch (err) {
-    // If SSO silent attempt failed (e.g. interaction_required), just redirect to home
-    if ((state as string)?.startsWith('sso:')) {
-      return res.redirect('/?sso=failed');
-    }
-    console.error('Azure callback error:', err);
-    res.status(500).send('Authentication failed');
-  }
-});
-
-// Start GitHub Device Flow — returns user_code + verification_uri to the browser
+// Start GitHub Device Flow
 router.post('/github/device/start', async (req, res) => {
-  if (!req.session.azureAccount) {
-    return res.status(401).json({ error: 'Azure AD authentication required' });
-  }
-
   try {
     const deviceData = await requestDeviceCode();
-    // Store device_code server-side; never sent to the browser
     req.session.githubDeviceCode = deviceData.device_code;
     req.session.githubDeviceExpiry = Date.now() + deviceData.expires_in * 1000;
 
@@ -117,12 +26,8 @@ router.post('/github/device/start', async (req, res) => {
   }
 });
 
-// Poll GitHub Device Flow — called by the browser every `interval` seconds
+// Poll GitHub Device Flow
 router.post('/github/device/poll', async (req, res) => {
-  if (!req.session.azureAccount) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
   const deviceCode = req.session.githubDeviceCode;
   const expiry = req.session.githubDeviceExpiry;
 
@@ -143,7 +48,6 @@ router.post('/github/device/poll', async (req, res) => {
       return res.json({ status: result.status });
     }
 
-    // Authorized — exchange device code for a real token
     if (!result.token) throw new Error('Token missing in authorized response');
 
     const user = await validateGitHubToken(result.token);
@@ -163,18 +67,15 @@ router.post('/github/device/poll', async (req, res) => {
 
 // Logout
 router.get('/logout', (req, res) => {
-  const postLogoutUrl = `${req.protocol}://${req.get('host')}`;
   req.session.destroy(() => {
-    res.redirect(postLogoutUrl);
+    res.redirect('/');
   });
 });
 
-// Auth status (for SPA) — returns granular state so the UI can drive multi-step auth
+// Auth status
 router.get('/status', (req, res) => {
   res.json({
-    authenticated: !!req.session?.azureAccount && !!req.session?.githubToken,
-    azureAuthenticated: !!req.session?.azureAccount,
-    azureUser: req.session?.azureAccount?.name || null,
+    authenticated: !!req.session?.githubToken,
     githubUser: req.session?.githubUser?.login || null,
   });
 });

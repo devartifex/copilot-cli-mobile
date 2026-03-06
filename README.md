@@ -1,68 +1,274 @@
-# Copilot CLI Mobile 🤖📱
+# Copilot CLI Web
 
-Accedi alla GitHub Copilot CLI (e a qualsiasi terminale) dal browser del tuo smartphone.
+> **Chat with GitHub Copilot from any browser** — a secure, self-hosted web app powered by the official [GitHub Copilot SDK](https://github.com/github/copilot-sdk).
 
-## ✨ Funzionalità
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-20%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 20+">
+  <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Azure_Container_Apps-Consumption-0078D4?logo=microsoftazure&logoColor=white" alt="Azure Container Apps">
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License">
+</p>
 
-- **Terminale completo** nel browser con [xterm.js](https://xtermjs.org/)
-- **Ottimizzato per mobile** — dark theme, quick keys, resize automatico
-- **Sicuro** — password auth, rate limiting, session tokens con scadenza
-- **Zero build step** — `npm install && npm start`
-- **Fallback automatico** — usa `node-pty` se disponibile, altrimenti `child_process`
+---
 
-## 🚀 Quick Start
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| 🤖 **Copilot SDK** | Uses `@github/copilot-sdk` — the same engine behind GitHub Copilot CLI, accessed programmatically via JSON-RPC |
+| 💬 **Chat UI** | Clean, responsive, mobile-first interface with markdown rendering and syntax highlighting |
+| ⚡ **Streaming** | Real-time token-by-token responses over WebSocket |
+| 🔐 **Azure AD** | Enterprise-grade authentication via Microsoft Entra ID (OIDC + PKCE + refresh tokens) |
+| 🐙 **GitHub OAuth** | Seamless integration with your GitHub Copilot license |
+| 🏗️ **IaC** | One-command deployment with `azd up` — Bicep templates provision all Azure resources |
+| 🔄 **CI/CD** | GitHub Actions workflows for continuous integration and deployment |
+| 💰 **Scale-to-zero** | Azure Container Apps Consumption plan — near-zero cost when idle |
+
+## Architecture
+
+```
+Browser (mobile / desktop)         Azure Container Apps
+┌─────────────────────┐           ┌──────────────────────────┐
+│                     │           │  Express + TypeScript    │
+│  Chat UI (SPA)      │◄─WSS────►│                          │
+│                     │           │  ┌── MSAL Node ────────┐ │
+│  ┌─ Azure AD Login  │──OIDC───►│  │  Token cache         │ │
+│  │                  │           │  │  Silent refresh      │ │
+│  └─ GitHub OAuth    │──OAuth──►│  └──────────────────────┘ │
+│                     │           │                          │
+└─────────────────────┘           │  ┌── Copilot SDK ──────┐ │
+                                  │  │  JSON-RPC (stdio)    │ │
+                                  │  │  Copilot CLI server  │ │
+                                  │  └──────────────────────┘ │
+                                  └──────────────────────────┘
+```
+
+## Getting Started
+
+### Prerequisites
+
+- **Node.js 20+** — required by `@github/copilot-sdk`
+- **GitHub account** with an active [Copilot license](https://github.com/features/copilot#pricing) (free tier works)
+- **Azure subscription** — for deployment ([free account](https://azure.microsoft.com/free/))
+- **Azure CLI** (`az`) — [install guide](https://docs.microsoft.com/cli/azure/install-azure-cli)
+- **Azure Developer CLI** (`azd`) — [install guide](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) *(for deployment only)*
+
+### 1. Clone and Install
 
 ```bash
-# Clona il repo
-git clone https://github.com/youruser/copilot-cli-mobile.git
-cd copilot-cli-mobile
-
-# Configura
-cp .env.example .env
-# Modifica .env e imposta COPILOT_CLI_PASSWORD
-
-# Installa e avvia
+git clone https://github.com/youruser/copilot-cli-web.git
+cd copilot-cli-web
 npm install
-npm start
 ```
 
-Apri l'URL mostrato nel terminale sul tuo smartphone (stessa rete WiFi).
+### 2. Configure Authentication
 
-## ⚙️ Configurazione
+You need two registrations: one in Azure AD and one on GitHub.
 
-| Variabile | Default | Descrizione |
-|---|---|---|
-| `COPILOT_CLI_PASSWORD` | *(obbligatoria)* | Password di accesso |
-| `PORT` | `3000` | Porta del server |
-| `HOST` | `0.0.0.0` | Host binding |
-| `SESSION_TTL` | `86400000` | Durata sessione (ms, default 24h) |
+#### Azure AD App Registration
 
-## 🔒 Sicurezza
+> **Automated**: Run `./infra/scripts/setup-entra-app.sh http://localhost:3000` after `az login`.
+>
+> **Manual**: See [Azure Setup Guide](./docs/azure-setup.md#1-azure-ad-app-registration-microsoft-entra-id) for step-by-step portal instructions.
 
-- **Password** — confronto timing-safe con SHA-256
-- **Rate limiting** — max 5 tentativi login al minuto per IP
-- **Session tokens** — generati con `crypto.randomBytes`, scadenza configurabile
-- **Security headers** — CSP, X-Frame-Options, X-Content-Type-Options
-- **Per produzione** — usa HTTPS tramite reverse proxy (nginx/caddy) o tunnel (cloudflared/ngrok)
+#### GitHub OAuth App — Device Flow (no redirect URI needed)
 
-## 📱 Quick Keys
+The app uses [GitHub Device Authorization Flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow) — the same flow used by `gh auth login`. Each user authenticates interactively from the app UI, using their own GitHub account (personal or work/org).
 
-La barra inferiore offre accesso rapido a:
-- `Tab` `^C` `^D` `^Z` `^L` — scorciatoie comuni
-- `↑` `↓` `←` `→` — navigazione
-- `Esc` `|` `&` `>` `~` `/` — caratteri speciali
+1. Go to [GitHub → Settings → Developer settings → OAuth Apps](https://github.com/settings/developers)
+2. Click **New OAuth App**
+3. Set:
+   - **Application name**: `Copilot CLI Web`
+   - **Homepage URL**: `http://localhost:3000`
+   - **Authorization callback URL**: `http://localhost:3000` (device flow doesn't use a callback)
+4. Note the **Client ID** → `GITHUB_CLIENT_ID`
+5. **No Client Secret needed** for device flow
 
-## 🏗️ Architettura
+### 3. Set Environment Variables
 
-```
-Browser (smartphone)          Server (PC)
-┌─────────────┐              ┌──────────────┐
-│  xterm.js   │◄──WebSocket──►│  Express     │
-│  + UI       │              │  + node-pty  │
-│  + Auth     │              │  + Auth      │
-└─────────────┘              └──────────────┘
+```bash
+cp .env.example .env
 ```
 
-## 📄 License
+Edit `.env`:
+
+```env
+AZURE_CLIENT_ID=<from-azure-app-registration>
+AZURE_TENANT_ID=<from-azure-portal>
+AZURE_CLIENT_SECRET=<from-azure-app-registration>
+GITHUB_CLIENT_ID=<from-github-oauth-app>
+SESSION_SECRET=<run: openssl rand -hex 32>
+BASE_URL=http://localhost:3000
+```
+
+> No `GITHUB_CLIENT_SECRET` needed — device flow only requires the client ID.
+
+### 4. Run Locally
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) — sign in with Microsoft, then connect GitHub by entering a short code. The chat is ready.
+
+## Deployment
+
+### One-Command Deploy with `azd`
+
+```bash
+# Login to Azure
+az login
+azd auth login
+
+# Set your secrets (no GITHUB_CLIENT_SECRET — device flow doesn't need it)
+azd env set AZURE_CLIENT_ID <value>
+azd env set AZURE_TENANT_ID <value>
+azd env set AZURE_CLIENT_SECRET <value>
+azd env set GITHUB_CLIENT_ID <value>
+
+# Provision infrastructure + build + deploy
+azd up
+```
+
+This creates:
+- **Azure Container Registry** (Basic) — ~$5/month
+- **Container Apps Environment** — managed Kubernetes
+- **Container App** — your app, with scale-to-zero (Consumption plan)
+
+> **Important**: After deployment, update your Azure AD and GitHub OAuth redirect URIs to use the production URL (shown in `azd up` output).
+
+### Docker (Local)
+
+```bash
+docker compose up --build
+```
+
+### CI/CD with GitHub Actions
+
+Two workflows are included:
+
+| Workflow | Trigger | What it does |
+|----------|---------|-------------|
+| `ci.yml` | Every push / PR | Type-check, lint, build |
+| `deploy.yml` | Push to `main` | Build Docker image → push to ACR → deploy to Container Apps |
+
+**Required GitHub Secrets:**
+
+| Secret | How to get it |
+|--------|--------------|
+| `AZURE_CREDENTIALS` | `az ad sp create-for-rbac --sdk-auth --role contributor --scopes /subscriptions/<sub-id>` |
+| `ACR_LOGIN_SERVER` | `<name>.azurecr.io` (from `azd up` output) |
+| `ACR_NAME` | Container Registry name (from `azd up` output) |
+| `AZURE_RESOURCE_GROUP` | Resource Group name (from `azd up` output) |
+
+## Configuration Reference
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AZURE_CLIENT_ID` | ✅ | — | Azure AD app registration client ID |
+| `AZURE_TENANT_ID` | ✅ | — | Azure AD (Entra ID) tenant ID |
+| `AZURE_CLIENT_SECRET` | ✅ | — | Azure AD app client secret |
+| `GITHUB_CLIENT_ID` | ✅ | — | GitHub OAuth app client ID (no secret needed) |
+| `SESSION_SECRET` | ✅ | — | Random string for session encryption (≥32 chars) |
+| `BASE_URL` | ✅ | — | Full app URL (e.g., `http://localhost:3000`) |
+| `PORT` | ❌ | `3000` | HTTP server port |
+| `NODE_ENV` | ❌ | `development` | Set to `production` for secure cookies + trust proxy |
+
+## GitHub MCP Tools
+
+When a user connects GitHub, the app automatically configures the [GitHub MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/github) as a tool provider for Copilot. This gives Copilot access to your repositories during the conversation:
+
+| Tool | What Copilot can do |
+|------|---------------------|
+| `list_repositories` | List your repos (personal or org) |
+| `get_file_contents` | Read any file from a repo |
+| `search_code` | Search code across repos |
+| `list_issues` / `create_issue` | View and create GitHub issues |
+| `list_pull_requests` / `create_pull_request` | View and open PRs |
+| `get_pull_request` / `merge_pull_request` | Inspect and merge PRs |
+| `push_files` | Commit and push file changes |
+
+> **Personal vs Work**: the tools automatically scope to the authenticated user's account. Log in with your personal GitHub account for personal repos; log in with your work/org account for company repos with SSO.
+
+## Security
+
+This app is designed with security as a first-class concern:
+
+- **No shell access** — the server only exposes the Copilot SDK API; there is no way to run arbitrary commands
+- **Azure AD (OIDC + PKCE)** — enterprise-grade authentication with proof key for code exchange
+- **Refresh tokens** — MSAL token cache enables automatic silent renewal (~90 day sessions with zero re-logins)
+- **Server-side token storage** — the GitHub OAuth token is stored in the Express session and never sent to the browser
+- **Security headers** — Helmet middleware sets CSP, HSTS, X-Frame-Options, X-Content-Type-Options
+- **Rate limiting** — per-IP request throttling to prevent abuse
+- **Secure cookies** — `httpOnly`, `secure` (in production), `sameSite: lax`
+- **CSRF protection** — `state` parameter validation on all OAuth callbacks
+
+## Project Structure
+
+```
+copilot-cli-web/
+├── src/
+│   ├── index.ts                # Server entry point
+│   ├── config.ts               # Environment variable validation
+│   ├── server.ts               # Express app, middleware, static files
+│   ├── auth/
+│   │   ├── azure.ts            # Azure AD OIDC (MSAL + PKCE + refresh)
+│   │   ├── github.ts           # GitHub OAuth flow
+│   │   └── middleware.ts       # requireAuth / requireGitHubToken guards
+│   ├── copilot/
+│   │   ├── client.ts           # CopilotClient lifecycle management
+│   │   └── session.ts          # Session creation, model listing
+│   ├── routes/
+│   │   ├── auth.ts             # /auth/* endpoints (login, callback, logout)
+│   │   └── api.ts              # /api/* endpoints (models)
+│   ├── ws/
+│   │   └── handler.ts          # WebSocket: auth, message routing, streaming
+│   └── types/
+│       └── session.d.ts        # Express session type augmentation
+├── public/
+│   ├── index.html              # Single-page app shell
+│   ├── css/style.css           # Dark theme, responsive layout
+│   └── js/
+│       ├── app.js              # App initialization and event wiring
+│       ├── auth.js             # Auth status checking
+│       └── chat.js             # Chat UI, WebSocket, markdown rendering
+├── infra/
+│   ├── main.bicep              # Bicep entry point
+│   ├── main.parameters.json    # azd parameter bindings
+│   ├── modules/
+│   │   ├── container-apps.bicep    # Container Apps + environment
+│   │   └── container-registry.bicep # Azure Container Registry
+│   └── scripts/
+│       └── setup-entra-app.sh  # Automated Azure AD app registration
+├── .github/workflows/
+│   ├── ci.yml                  # CI: type-check + build
+│   └── deploy.yml              # CD: Docker → ACR → Container Apps
+├── azure.yaml                  # azd project configuration
+├── Dockerfile                  # Multi-stage build (Node 20 + Copilot CLI)
+├── docker-compose.yml          # Local Docker development
+├── package.json
+└── tsconfig.json
+```
+
+## How It Works
+
+1. **User opens the app** → redirected to Azure AD for Microsoft login
+2. **After Azure AD login** → automatically redirected to GitHub OAuth to authorize Copilot access
+3. **Tokens stored server-side** → Azure AD tokens in MSAL cache (auto-refresh), GitHub token in Express session
+4. **Chat via WebSocket** → user sends a message, server forwards it to `@github/copilot-sdk`
+5. **Streaming response** → SDK emits `assistant.message_delta` events, forwarded to the browser in real-time
+6. **Subsequent visits** → `acquireTokenSilent` renews the Azure AD token without any redirect; GitHub token persists in session
+
+## Cost Estimate
+
+For single-user, intermittent usage:
+
+| Resource | Monthly Cost |
+|----------|-------------|
+| Azure Container Apps (Consumption) | ~$0 (within free tier) |
+| Azure Container Registry (Basic) | ~$5 |
+| **Total** | **~$5/month** |
+
+## License
 
 MIT

@@ -1,0 +1,5 @@
+{
+  "containerAppsEnvironment": "cae-",
+  "containerRegistry": "cr",
+  "resourceGroup": "rg-"
+}

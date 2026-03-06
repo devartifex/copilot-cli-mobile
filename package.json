@@ -1,19 +1,38 @@
 {
-  "name": "copilot-cli-mobile",
-  "version": "1.0.0",
-  "description": "Access GitHub Copilot CLI from your smartphone browser",
-  "main": "server.js",
+  "name": "copilot-cli-web",
+  "version": "2.0.0",
+  "description": "GitHub Copilot CLI as a web app — Azure AD + GitHub OAuth + Copilot SDK",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
   },
-  "keywords": ["copilot", "cli", "mobile", "terminal", "web"],
+  "keywords": ["copilot", "cli", "web", "azure", "github", "oauth"],
   "license": "MIT",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
+    "@azure/msal-node": "^3.5.0",
+    "@github/copilot-sdk": "^0.1.30",
+    "@modelcontextprotocol/server-github": "^0.6.2",
     "dotenv": "^16.4.0",
     "express": "^4.21.0",
-    "node-pty": "^1.0.0",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.0",
+    "helmet": "^8.0.0",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.18.0",
+    "@types/node": "^20.17.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
   }
 }

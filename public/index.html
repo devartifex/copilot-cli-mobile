@@ -5,524 +5,132 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#1a1b26">
+  <meta name="theme-color" content="#0d1117">
   <title>Copilot CLI</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-      --bg: #1a1b26;
-      --bg-light: #24283b;
-      --fg: #c0caf5;
-      --accent: #7aa2f7;
-      --accent-hover: #89b4fa;
-      --danger: #f7768e;
-      --success: #9ece6a;
-      --border: #3b4261;
-      --quick-key-bg: #2f3549;
-      --quick-key-hover: #3d4560;
-      --radius: 8px;
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-    }
-
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--fg);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      overflow: hidden;
-      touch-action: manipulation;
-    }
-
-    /* ===== LOGIN ===== */
-    #login-screen {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      padding: 20px;
-    }
-
-    .login-card {
-      background: var(--bg-light);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 40px 30px;
-      width: 100%;
-      max-width: 360px;
-      text-align: center;
-    }
-
-    .login-card h1 {
-      font-size: 1.6rem;
-      margin-bottom: 8px;
-      color: var(--accent);
-    }
-
-    .login-card .subtitle {
-      font-size: 0.85rem;
-      color: #565f89;
-      margin-bottom: 28px;
-    }
-
-    .login-card input {
-      width: 100%;
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--bg);
-      color: var(--fg);
-      font-size: 16px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .login-card input:focus {
-      border-color: var(--accent);
-    }
-
-    .login-card button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 16px;
-      border: none;
-      border-radius: var(--radius);
-      background: var(--accent);
-      color: #1a1b26;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .login-card button:hover { background: var(--accent-hover); }
-    .login-card button:active { transform: scale(0.98); }
-    .login-card button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .error-msg {
-      color: var(--danger);
-      font-size: 0.85rem;
-      margin-top: 12px;
-      min-height: 20px;
-    }
-
-    /* ===== TERMINAL ===== */
-    #terminal-screen {
-      display: none;
-      flex-direction: column;
-      height: 100%;
-      height: 100dvh;
-    }
-
-    #header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-      background: var(--bg-light);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-      min-height: 44px;
-    }
-
-    #header .title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--accent);
-    }
-
-    #header .status {
-      font-size: 0.75rem;
-      color: var(--success);
-    }
-
-    #header .status.disconnected { color: var(--danger); }
-
-    .header-btn {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--fg);
-      padding: 6px 10px;
-      font-size: 0.8rem;
-      cursor: pointer;
-    }
-
-    .header-btn:hover { background: var(--quick-key-hover); }
-
-    #terminal-container {
-      flex: 1;
-      overflow: hidden;
-      position: relative;
-    }
-
-    #terminal-container .xterm {
-      height: 100%;
-      padding: 4px;
-    }
-
-    /* ===== QUICK KEYS ===== */
-    #quick-keys {
-      display: flex;
-      flex-wrap: nowrap;
-      gap: 4px;
-      padding: 6px 8px;
-      padding-bottom: calc(6px + var(--safe-bottom));
-      background: var(--bg-light);
-      border-top: 1px solid var(--border);
-      overflow-x: auto;
-      flex-shrink: 0;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-
-    #quick-keys::-webkit-scrollbar { display: none; }
-
-    .qk {
-      flex-shrink: 0;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--quick-key-bg);
-      color: var(--fg);
-      font-size: 13px;
-      font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-      white-space: nowrap;
-      transition: background 0.1s;
-    }
-
-    .qk:active { background: var(--accent); color: var(--bg); }
-    .qk.mod { color: var(--accent); font-weight: 600; }
-
-    /* ===== RESPONSIVE ===== */
-    @media (max-width: 480px) {
-      .qk { padding: 8px 10px; font-size: 12px; }
-      #header { padding: 6px 10px; }
-    }
-
-    @media (orientation: landscape) and (max-height: 500px) {
-      #header { padding: 4px 10px; min-height: 36px; }
-      #quick-keys { padding: 4px 6px; }
-      .qk { padding: 6px 8px; font-size: 11px; }
-    }
-
-    /* ===== TOAST ===== */
-    .toast {
-      position: fixed;
-      bottom: 80px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--bg-light);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 20px;
-      font-size: 0.85rem;
-      z-index: 100;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;
-    }
-
-    .toast.show { opacity: 1; }
-  </style>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css">
 </head>
 <body>
 
-  <!-- LOGIN -->
-  <div id="login-screen">
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="screen">
     <div class="login-card">
-      <h1>🤖 Copilot CLI</h1>
-      <p class="subtitle">Secure remote terminal</p>
-      <form id="login-form">
-        <input type="password" id="password" placeholder="Password" autocomplete="current-password" required>
-        <button type="submit" id="login-btn">Login</button>
-      </form>
-      <p class="error-msg" id="error-msg"></p>
+      <div class="logo">
+        <svg width="40" height="40" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z"/>
+        </svg>
+      </div>
+      <h1>Copilot CLI</h1>
+      <p class="subtitle">Sign in with your Microsoft account to continue</p>
+      <button id="login-btn" class="btn-primary" onclick="window.location.href='/auth/login'">
+        Sign in with Microsoft
+      </button>
+      <p class="login-note">Azure AD authentication required</p>
     </div>
   </div>
 
-  <!-- TERMINAL -->
-  <div id="terminal-screen">
-    <div id="header">
-      <span class="title">🤖 Copilot CLI</span>
-      <span id="status" class="status">● Connected</span>
-      <button class="header-btn" id="logout-btn" title="Logout">⏻</button>
-    </div>
-    <div id="terminal-container">
-      <div id="terminal"></div>
-    </div>
-    <div id="quick-keys">
-      <button class="qk" data-key="Tab">Tab</button>
-      <button class="qk mod" data-seq="\x03">^C</button>
-      <button class="qk mod" data-seq="\x04">^D</button>
-      <button class="qk mod" data-seq="\x1a">^Z</button>
-      <button class="qk mod" data-seq="\x0c">^L</button>
-      <button class="qk" data-seq="\x1b[A">↑</button>
-      <button class="qk" data-seq="\x1b[B">↓</button>
-      <button class="qk" data-seq="\x1b[D">←</button>
-      <button class="qk" data-seq="\x1b[C">→</button>
-      <button class="qk" data-seq="\x1b">Esc</button>
-      <button class="qk" data-char="|">|</button>
-      <button class="qk" data-char="&">&amp;</button>
-      <button class="qk" data-char=">">&gt;</button>
-      <button class="qk" data-char="~">~</button>
-      <button class="qk" data-char="/">/</button>
+  <!-- GITHUB DEVICE FLOW SCREEN -->
+  <div id="github-screen" class="screen" style="display:none">
+    <div class="login-card">
+      <div class="logo github-logo">
+        <svg width="40" height="40" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+        </svg>
+      </div>
+      <h1>Connect GitHub</h1>
+      <p class="subtitle">Enter this code at GitHub to authorize Copilot access</p>
+
+      <div class="device-code-box">
+        <span id="device-code-text" class="device-code-text">Loading...</span>
+        <button class="copy-btn" id="copy-code-btn" title="Copy code">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/>
+          </svg>
+        </button>
+      </div>
+
+      <a id="device-link" href="https://github.com/login/device" target="_blank" rel="noopener noreferrer" class="btn-primary btn-github">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:8px;flex-shrink:0">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+        </svg>
+        Open github.com/login/device
+      </a>
+
+      <div class="device-status" id="device-status">
+        <span class="spinner"></span>
+        <span id="device-status-text">Waiting for authorization...</span>
+      </div>
+
+      <p class="device-expires" id="device-expires"></p>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <!-- CHAT SCREEN -->
+  <div id="chat-screen" class="screen" style="display:none">
+    <header id="header">
+      <div class="header-left">
+        <span class="header-logo">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z"/>
+          </svg>
+        </span>
+        <span class="header-title">Copilot CLI</span>
+      </div>
+      <div class="header-center">
+        <select id="model-select" class="model-select">
+          <option value="gpt-4.1">GPT-4.1</option>
+        </select>
+      </div>
+      <div class="header-right">
+        <span id="user-badge" class="user-badge"></span>
+        <button class="icon-btn" id="new-chat-btn" title="New chat">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M7.25 1a.75.75 0 0 1 .75.75V7h5.25a.75.75 0 0 1 0 1.5H8v5.25a.75.75 0 0 1-1.5 0V8.5H1.25a.75.75 0 0 1 0-1.5H6.5V1.75A.75.75 0 0 1 7.25 1Z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="logout-btn" title="Logout">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M2 2.75C2 1.784 2.784 1 3.75 1h2.5a.75.75 0 0 1 0 1.5h-2.5a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h2.5a.75.75 0 0 1 0 1.5h-2.5A1.75 1.75 0 0 1 2 13.25Zm10.44 4.5-1.97-1.97a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734l1.97-1.97H6.75a.75.75 0 0 1 0-1.5Z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
 
-  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
-  <script>
-    // --- State ---
-    let token = sessionStorage.getItem('token');
-    let ws = null;
-    let term = null;
-    let fitAddon = null;
-    let reconnectTimer = null;
+    <main id="messages" class="messages">
+      <div class="welcome-message">
+        <h2>How can I help you today?</h2>
+        <p>Ask me anything — I'm powered by GitHub Copilot.</p>
+      </div>
+    </main>
 
-    // --- Utils ---
-    function toast(msg, duration = 2000) {
-      const el = document.getElementById('toast');
-      el.textContent = msg;
-      el.classList.add('show');
-      setTimeout(() => el.classList.remove('show'), duration);
-    }
+    <footer id="input-area" class="input-area">
+      <div class="input-wrapper">
+        <textarea id="message-input" placeholder="Ask Copilot..." rows="1" autofocus></textarea>
+        <button id="send-btn" class="send-btn" disabled title="Send">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M.989 8 .064 2.68a1.342 1.342 0 0 1 1.85-1.462l13.402 5.744a1.13 1.13 0 0 1 0 2.076L1.913 14.782a1.343 1.343 0 0 1-1.85-1.463L.99 8Zm1.014.017L1.14 13.5a.25.25 0 0 0 .346.273L14.64 8.018 2.003 8.017ZM2.003 7.983 14.64 7.982 1.487 2.227a.25.25 0 0 0-.346.273l.876 5.483Z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="input-footer">
+        <span id="status-indicator" class="status-dot disconnected"></span>
+        <span id="status-text" class="status-text">Connecting...</span>
+      </div>
+    </footer>
+  </div>
 
-    function setStatus(connected) {
-      const el = document.getElementById('status');
-      el.textContent = connected ? '● Connected' : '● Disconnected';
-      el.className = 'status' + (connected ? '' : ' disconnected');
-    }
-
-    // --- Login ---
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('login-btn');
-      const errEl = document.getElementById('error-msg');
-      const pw = document.getElementById('password').value;
-
-      btn.disabled = true;
-      errEl.textContent = '';
-
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: pw }),
-        });
-        const data = await res.json();
-
-        if (res.ok) {
-          token = data.token;
-          sessionStorage.setItem('token', token);
-          showTerminal();
-        } else {
-          errEl.textContent = data.error || 'Login error';
-        }
-      } catch (err) {
-        errEl.textContent = 'Connection error';
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    // --- Terminal ---
-    function showTerminal() {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('terminal-screen').style.display = 'flex';
-
-      if (!term) {
-        term = new Terminal({
-          fontSize: 14,
-          fontFamily: "'SF Mono', 'Cascadia Code', 'Fira Code', 'Menlo', monospace",
-          theme: {
-            background: '#1a1b26',
-            foreground: '#c0caf5',
-            cursor: '#c0caf5',
-            cursorAccent: '#1a1b26',
-            selectionBackground: '#33467c',
-            black: '#15161e',
-            red: '#f7768e',
-            green: '#9ece6a',
-            yellow: '#e0af68',
-            blue: '#7aa2f7',
-            magenta: '#bb9af7',
-            cyan: '#7dcfff',
-            white: '#a9b1d6',
-            brightBlack: '#414868',
-            brightRed: '#f7768e',
-            brightGreen: '#9ece6a',
-            brightYellow: '#e0af68',
-            brightBlue: '#7aa2f7',
-            brightMagenta: '#bb9af7',
-            brightCyan: '#7dcfff',
-            brightWhite: '#c0caf5',
-          },
-          cursorBlink: true,
-          allowTransparency: false,
-          scrollback: 5000,
-          convertEol: true,
-        });
-
-        fitAddon = new FitAddon.FitAddon();
-        const webLinksAddon = new WebLinksAddon.WebLinksAddon();
-        term.loadAddon(fitAddon);
-        term.loadAddon(webLinksAddon);
-        term.open(document.getElementById('terminal'));
-        fitAddon.fit();
-
-        term.onData(data => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'input', data }));
-          }
-        });
-
-        term.onResize(({ cols, rows }) => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'resize', cols, rows }));
-          }
-        });
-      }
-
-      connectWS();
-      setupResize();
-    }
-
-    // --- WebSocket ---
-    function connectWS() {
-      if (ws) { try { ws.close(); } catch(e){} }
-
-      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${proto}//${location.host}/ws?token=${token}`);
-
-      ws.onopen = () => {
-        setStatus(true);
-        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-        // Send initial size
-        if (fitAddon) {
-          fitAddon.fit();
-          const dims = fitAddon.proposeDimensions();
-          if (dims) {
-            ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
-          }
-        }
-      };
-
-      ws.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data);
-          if (msg.type === 'output') term.write(msg.data);
-          if (msg.type === 'exit') {
-            toast('Terminal session closed');
-            setStatus(false);
-          }
-          if (msg.type === 'error') toast(msg.data, 4000);
-        } catch (err) { /* ignore */ }
-      };
-
-      ws.onclose = (e) => {
-        setStatus(false);
-        if (e.code === 4001) {
-          // Unauthorized - go back to login
-          sessionStorage.removeItem('token');
-          token = null;
-          document.getElementById('terminal-screen').style.display = 'none';
-          document.getElementById('login-screen').style.display = 'flex';
-          toast('Session expired');
-          return;
-        }
-        // Auto-reconnect
-        reconnectTimer = setTimeout(() => connectWS(), 3000);
-      };
-
-      ws.onerror = () => setStatus(false);
-    }
-
-    // --- Resize ---
-    function setupResize() {
-      let resizeTimeout;
-      const doResize = () => {
-        if (fitAddon && term) {
-          try { fitAddon.fit(); } catch(e){}
-        }
-      };
-
-      window.addEventListener('resize', () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(doResize, 150);
-      });
-
-      // Handle virtual keyboard on mobile
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-          clearTimeout(resizeTimeout);
-          resizeTimeout = setTimeout(doResize, 150);
-        });
-      }
-
-      // Initial fit
-      setTimeout(doResize, 100);
-    }
-
-    // --- Quick Keys ---
-    document.getElementById('quick-keys').addEventListener('click', (e) => {
-      const btn = e.target.closest('.qk');
-      if (!btn || !ws || ws.readyState !== WebSocket.OPEN) return;
-
-      if (btn.dataset.key === 'Tab') {
-        ws.send(JSON.stringify({ type: 'input', data: '\t' }));
-      } else if (btn.dataset.seq) {
-        ws.send(JSON.stringify({ type: 'input', data: btn.dataset.seq }));
-      } else if (btn.dataset.char) {
-        ws.send(JSON.stringify({ type: 'input', data: btn.dataset.char }));
-      }
-
-      term.focus();
-    });
-
-    // Prevent quick key buttons from stealing focus
-    document.getElementById('quick-keys').addEventListener('mousedown', (e) => {
-      e.preventDefault();
-    });
-    document.getElementById('quick-keys').addEventListener('touchstart', (e) => {
-      if (e.target.closest('.qk')) e.preventDefault();
-    }, { passive: false });
-
-    // --- Logout ---
-    document.getElementById('logout-btn').addEventListener('click', () => {
-      if (confirm('Disconnect?')) {
-        sessionStorage.removeItem('token');
-        token = null;
-        if (ws) ws.close();
-        location.reload();
-      }
-    });
-
-    // --- Auto-login if token exists ---
-    (async () => {
-      if (token) {
-        try {
-          const res = await fetch('/api/check', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (res.ok) {
-            showTerminal();
-            return;
-          }
-        } catch(e) {}
-        sessionStorage.removeItem('token');
-        token = null;
-      }
-      // Focus password field
-      document.getElementById('password').focus();
-    })();
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/javascript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/python.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/bash.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/json.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/css.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/xml.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/shell.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/chat.js"></script>
+  <script src="/js/app.js"></script>
 </body>
 </html>

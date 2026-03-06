@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0d1117">
@@ -78,9 +78,11 @@
           <textarea id="message-input" placeholder="Type @ to mention files, # for issues/PRs, / for commands, or ? for shortcuts" rows="1" autofocus></textarea>
         </div>
         <div class="input-footer">
-          <span id="status-text" class="c-dim"></span>
-          <span class="input-footer-right">
+          <span class="input-footer-left">
+            <span id="status-text" class="c-dim"></span>
             <span id="user-badge" class="c-dim"></span>
+          </span>
+          <span class="input-footer-right">
             <select id="mode-select" class="mode-select" title="Agent mode">
               <option value="interactive">interactive</option>
               <option value="plan">plan</option>
@@ -90,7 +92,7 @@
               <option value="gpt-4.1">gpt-4.1</option>
             </select>
             <button class="term-btn" id="new-chat-btn" title="New chat">/new</button>
-            <button class="term-btn term-btn-danger" id="logout-btn" title="Logout">/logout</button>
+            <button class="term-btn term-btn-danger" id="logout-btn" title="Logout">/quit</button>
           </span>
         </div>
       </div>

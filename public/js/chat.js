@@ -23,6 +23,7 @@ const Chat = {
     this.ws.onopen = () => {
       this.setStatus('connected');
       this.reconnectDelay = 3000;
+      this.initViewportHandler();
       if (this.reconnectTimer) {
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = null;
@@ -307,7 +308,7 @@ const Chat = {
 
     const header = document.createElement('div');
     header.className = 'reasoning-header';
-    header.innerHTML = '<span class="reasoning-icon">◐</span> <span class="reasoning-label">Thinking…</span>';
+    header.innerHTML = '<span class="reasoning-chevron">▼</span> <span class="reasoning-icon">◐</span> <span class="reasoning-label">Thinking…</span>';
     header.addEventListener('click', () => {
       el.classList.toggle('collapsed');
     });
@@ -347,9 +348,9 @@ const Chat = {
       : msg.toolName;
 
     el.innerHTML =
-      '<span class="tool-icon spinner-char">⠋</span> ' +
+      '<span class="tool-icon spinner-char">⠋</span>' +
       '<span class="tool-name">' + DOMPurify.sanitize(displayName) + '</span>' +
-      '<span class="tool-status"> running…</span>';
+      '<span class="tool-status">running…</span>';
 
     messagesEl.appendChild(el);
     this.activeTools.set(msg.toolCallId, el);
@@ -408,6 +409,20 @@ const Chat = {
 
   disableInput() {
     document.getElementById('message-input').disabled = true;
+  },
+
+  initViewportHandler() {
+    // On mobile, virtual keyboard resizes the visual viewport.
+    // Adjust the app height so the input stays above the keyboard.
+    if (window.visualViewport) {
+      const handler = () => {
+        const vvh = window.visualViewport.height;
+        document.documentElement.style.setProperty('--vh', `${vvh}px`);
+        this.scrollToBottom();
+      };
+      window.visualViewport.addEventListener('resize', handler);
+      handler();
+    }
   },
 };
 

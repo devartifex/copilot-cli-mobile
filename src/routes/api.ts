@@ -15,10 +15,13 @@ router.get('/models', async (req, res) => {
       req.session.githubToken!
     );
     const models = await getAvailableModels(client);
-    res.json({ models });
+    // Ensure models is always an array
+    const modelArray = Array.isArray(models) ? models : [];
+    res.json({ models: modelArray });
   } catch (err: any) {
     console.error('Models error:', err);
-    res.status(500).json({ error: 'Failed to list models' });
+    console.error('Models error stack:', err.stack);
+    res.status(500).json({ error: `Failed to list models: ${err.message}`, models: [] });
   }
 });
 

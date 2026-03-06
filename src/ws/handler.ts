@@ -69,20 +69,28 @@ export function setupWebSocket(
               copilotSession = null;
             }
 
-            const client = await getCopilotClient(sessionId, githubToken);
-            copilotSession = await createCopilotSession(client, githubToken, msg.model);
+            try {
+              const client = await getCopilotClient(sessionId, githubToken);
+              copilotSession = await createCopilotSession(client, githubToken, msg.model);
 
-            copilotSession.on(
-              'assistant.message_delta',
-              (event: any) => {
-                send(ws, {
-                  type: 'delta',
-                  content: event.data.deltaContent,
-                });
-              }
-            );
+              copilotSession.on(
+                'assistant.message_delta',
+                (event: any) => {
+                  send(ws, {
+                    type: 'delta',
+                    content: event.data.deltaContent,
+                  });
+                }
+              );
 
-            send(ws, { type: 'session_created', model: msg.model });
+              send(ws, { type: 'session_created', model: msg.model });
+            } catch (sessionErr: any) {
+              console.error('Session creation error:', sessionErr.message);
+              send(ws, {
+                type: 'error',
+                message: `Failed to create session: ${sessionErr.message}`,
+              });
+            }
             break;
           }
 
@@ -106,13 +114,16 @@ export function setupWebSocket(
           case 'list_models': {
             const client = await getCopilotClient(sessionId, githubToken);
             const models = await getAvailableModels(client);
-            send(ws, { type: 'models', models });
+            // Ensure models is always an array before sending
+            const modelArray = Array.isArray(models) ? models : [];
+            send(ws, { type: 'models', models: modelArray });
             break;
           }
         }
       } catch (err: any) {
         console.error('WS message error:', err);
-        send(ws, { type: 'error', message: 'An internal error occurred' });
+        console.error('Error stack:', err.stack);
+        send(ws, { type: 'error', message: `An internal error occurred: ${err.message}` });
       }
     });
 

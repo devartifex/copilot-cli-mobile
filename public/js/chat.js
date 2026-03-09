@@ -448,6 +448,10 @@ const Chat = {
 
     if (isReasoning) {
       const model = this.modelsMap.get(modelId);
+      // Reset to model's default reasoning effort when switching models
+      if (model && model.defaultReasoningEffort) {
+        this.reasoningEffort = model.defaultReasoningEffort;
+      }
       this.buildReasoningButtons(model);
     }
   },
@@ -949,7 +953,13 @@ const Chat = {
     // Group tools by source (MCP server vs built-in)
     const grouped = {};
     tools.forEach((tool) => {
-      const group = tool.mcpServerName || 'built-in';
+      // Derive MCP server name from namespacedName (e.g. "github/tool_name")
+      let group = 'built-in';
+      if (tool.mcpServerName) {
+        group = tool.mcpServerName;
+      } else if (tool.namespacedName && tool.namespacedName.includes('/')) {
+        group = tool.namespacedName.split('/')[0];
+      }
       if (!grouped[group]) grouped[group] = [];
       grouped[group].push(tool);
     });
@@ -1014,15 +1024,22 @@ const Chat = {
       container.appendChild(groupEl);
     });
 
-    this.updateToolCount(tools.length);
+    this.updateToolCount(tools.length, grouped);
   },
 
-  updateToolCount(totalTools) {
+  updateToolCount(totalTools, grouped) {
     const total = totalTools || 0;
     const activeCount = Math.max(0, total - this.excludedTools.length);
     const envToolsEl = document.getElementById('env-tools-text');
     if (envToolsEl) {
-      envToolsEl.textContent = activeCount + ' tool' + (activeCount !== 1 ? 's' : '') + ' active';
+      let text = activeCount + ' tool' + (activeCount !== 1 ? 's' : '') + ' active';
+      if (grouped) {
+        const mcpCount = Object.keys(grouped).filter((g) => g !== 'built-in').length;
+        if (mcpCount > 0) {
+          text += ' · ' + mcpCount + ' MCP server' + (mcpCount !== 1 ? 's' : '');
+        }
+      }
+      envToolsEl.textContent = text;
       const toolsLine = document.getElementById('env-tools-line');
       if (toolsLine) toolsLine.style.display = '';
     }

@@ -419,7 +419,13 @@ export function setupWebSocket(
           case 'list_sessions': {
             try {
               const sessions = await client.listSessions();
-              send(ws, { type: 'sessions', sessions: Array.isArray(sessions) ? sessions : [] });
+              const list = Array.isArray(sessions) ? sessions.map((s: any) => ({
+                id: s.sessionId ?? s.id,
+                title: s.summary ?? s.title,
+                updatedAt: s.modifiedTime ?? s.updatedAt,
+                model: s.model,
+              })) : [];
+              send(ws, { type: 'sessions', sessions: list });
             } catch (err: any) {
               console.error('List sessions error:', err.message);
               send(ws, { type: 'sessions', sessions: [] });

@@ -1687,9 +1687,9 @@ html, body {
   justify-content: flex-end;
 }
 
-.plan-edit-btn,
-.plan-delete-btn {
-  font-size: 0.75em !important;
-  padding: 2px var(--sp-2) !important;
-  min-height: 22px !important;
+.plan-actions .plan-edit-btn,
+.plan-actions .plan-delete-btn {
+  font-size: 0.75em;
+  padding: 2px var(--sp-2);
+  min-height: 22px;
 }

@@ -301,7 +301,7 @@ function initChat(status) {
     const contentEl = document.getElementById('plan-content');
     const editEl = document.getElementById('plan-edit');
     const textarea = document.getElementById('plan-textarea');
-    textarea.value = contentEl.textContent || '';
+    textarea.value = Chat._planRawContent || '';
     contentEl.style.display = 'none';
     editEl.style.display = '';
   });

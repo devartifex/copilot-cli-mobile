@@ -437,8 +437,7 @@ const Chat = {
     if (model && model.capabilities) {
       return model.capabilities.supports && model.capabilities.supports.reasoningEffort === true;
     }
-    // Fallback regex for when modelsMap is not yet populated
-    return /\bo[1-9](-mini|-preview|-pro)?\b|thinking/i.test(modelId || '');
+    return false;
   },
 
   updateReasoningVisibility(modelId) {
@@ -464,8 +463,9 @@ const Chat = {
 
     // Only rebuild if the effort options differ
     const currentEfforts = [...toggle.querySelectorAll('.reasoning-opt')].map((b) => b.dataset.effort);
-    const sameEfforts = supportedEfforts.length === currentEfforts.length &&
-      supportedEfforts.every((e, i) => e === currentEfforts[i]);
+    const currentSet = new Set(currentEfforts);
+    const newSet = new Set(supportedEfforts);
+    const sameEfforts = currentSet.size === newSet.size && [...currentSet].every((e) => newSet.has(e));
     if (sameEfforts) return;
 
     toggle.innerHTML = '';
@@ -622,8 +622,8 @@ const Chat = {
       if (typeof model === 'object' && model.capabilities) {
         const parts = [];
         const limits = model.capabilities.limits;
-        if (limits?.max_context_window_tokens) parts.push('Context: ' + (limits.max_context_window_tokens / 1000) + 'k');
-        if (limits?.max_prompt_tokens) parts.push('Max prompt: ' + (limits.max_prompt_tokens / 1000) + 'k');
+        if (limits?.max_context_window_tokens) parts.push('Context: ' + Math.round(limits.max_context_window_tokens / 1000) + 'k');
+        if (limits?.max_prompt_tokens) parts.push('Max prompt: ' + Math.round(limits.max_prompt_tokens / 1000) + 'k');
         if (model.capabilities.supports?.vision) parts.push('Vision: yes');
         if (model.capabilities.supports?.reasoningEffort) parts.push('Reasoning: yes');
         if (model.billing?.multiplier) parts.push('Billing: ' + model.billing.multiplier + '×');
@@ -968,15 +968,34 @@ const Chat = {
         toolEl.className = 'tool-item';
         const isExcluded = this.excludedTools.includes(toolName);
 
-        toolEl.innerHTML =
-          '<label class="tool-toggle-label">' +
-          '<input type="checkbox" class="tool-toggle-check" data-tool="' + DOMPurify.sanitize(toolName) + '" ' + (isExcluded ? '' : 'checked') + '>' +
-          '<span class="tool-toggle-slider"></span>' +
-          '<span class="tool-toggle-name">' + DOMPurify.sanitize(toolName) + '</span>' +
-          '</label>' +
-          (tool.description ? '<div class="tool-toggle-desc">' + DOMPurify.sanitize(tool.description) + '</div>' : '');
+        const label = document.createElement('label');
+        label.className = 'tool-toggle-label';
 
-        const checkbox = toolEl.querySelector('.tool-toggle-check');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'tool-toggle-check';
+        checkbox.dataset.tool = toolName;
+        checkbox.checked = !isExcluded;
+
+        const slider = document.createElement('span');
+        slider.className = 'tool-toggle-slider';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'tool-toggle-name';
+        nameSpan.textContent = toolName;
+
+        label.appendChild(checkbox);
+        label.appendChild(slider);
+        label.appendChild(nameSpan);
+        toolEl.appendChild(label);
+
+        if (tool.description) {
+          const descEl = document.createElement('div');
+          descEl.className = 'tool-toggle-desc';
+          descEl.textContent = tool.description;
+          toolEl.appendChild(descEl);
+        }
+
         checkbox.addEventListener('change', () => {
           if (checkbox.checked) {
             this.excludedTools = this.excludedTools.filter((t) => t !== toolName);
@@ -999,7 +1018,8 @@ const Chat = {
   },
 
   updateToolCount(totalTools) {
-    const activeCount = totalTools - this.excludedTools.length;
+    const total = totalTools || 0;
+    const activeCount = Math.max(0, total - this.excludedTools.length);
     const envToolsEl = document.getElementById('env-tools-text');
     if (envToolsEl) {
       envToolsEl.textContent = activeCount + ' tool' + (activeCount !== 1 ? 's' : '') + ' active';
@@ -1138,12 +1158,15 @@ const Chat = {
   },
 
   // --- Plan management ---
+  _planRawContent: '',
+
   handlePlan(data) {
     const panel = document.getElementById('plan-panel');
     if (!panel) return;
 
     if (data.exists && data.content) {
       panel.style.display = '';
+      this._planRawContent = data.content;
       const contentEl = document.getElementById('plan-content');
       if (contentEl) {
         try {
@@ -1155,6 +1178,7 @@ const Chat = {
       }
     } else {
       panel.style.display = 'none';
+      this._planRawContent = '';
     }
   },
 

@@ -24,6 +24,86 @@ function send(ws: WebSocket, data: Record<string, unknown>): void {
   }
 }
 
+function wireSessionEvents(session: any, ws: WebSocket): void {
+  session.on('assistant.message_delta', (event: any) => {
+    send(ws, { type: 'delta', content: event.data.deltaContent });
+  });
+  session.on('assistant.reasoning_delta', (event: any) => {
+    send(ws, { type: 'reasoning_delta', content: event.data.deltaContent, reasoningId: event.data.reasoningId });
+  });
+  session.on('assistant.reasoning', (event: any) => {
+    send(ws, { type: 'reasoning_done', reasoningId: event.data.reasoningId });
+  });
+  session.on('assistant.intent', (event: any) => {
+    send(ws, { type: 'intent', intent: event.data.intent });
+  });
+  session.on('assistant.turn_start', () => { send(ws, { type: 'turn_start' }); });
+  session.on('assistant.turn_end', () => { send(ws, { type: 'turn_end' }); });
+  session.on('tool.execution_start', (event: any) => {
+    send(ws, { type: 'tool_start', toolCallId: event.data.toolCallId, toolName: event.data.toolName, mcpServerName: event.data.mcpServerName, mcpToolName: event.data.mcpToolName });
+  });
+  session.on('tool.execution_complete', (event: any) => {
+    send(ws, { type: 'tool_end', toolCallId: event.data.toolCallId });
+  });
+  session.on('tool.execution_progress', (event: any) => {
+    send(ws, { type: 'tool_progress', toolCallId: event.data.toolCallId, message: event.data.message });
+  });
+  session.on('session.mode_changed', (event: any) => {
+    send(ws, { type: 'mode_changed', mode: event.data.newMode });
+  });
+  session.on('session.error', (event: any) => {
+    send(ws, { type: 'error', message: event.data.message });
+  });
+  session.on('session.title_changed', (event: any) => {
+    send(ws, { type: 'title_changed', title: event.data.title });
+  });
+  session.on('assistant.usage', (event: any) => {
+    send(ws, { type: 'usage', inputTokens: event.data.inputTokens, outputTokens: event.data.outputTokens, totalTokens: event.data.totalTokens, reasoningTokens: event.data.reasoningTokens });
+  });
+  session.on('session.warning', (event: any) => {
+    send(ws, { type: 'warning', message: event.data.message });
+  });
+  session.on('subagent.started', (event: any) => {
+    send(ws, { type: 'subagent_start', agentName: event.data.agentName });
+  });
+  session.on('subagent.completed', (event: any) => {
+    send(ws, { type: 'subagent_end', agentName: event.data.agentName });
+  });
+  session.on('session.info', (event: any) => {
+    send(ws, { type: 'info', message: event.data?.message || event.data });
+  });
+  session.on('session.plan_changed', (event: any) => {
+    send(ws, { type: 'plan_changed', content: event.data?.content, path: event.data?.path });
+  });
+  session.on('session.compaction_start', () => { send(ws, { type: 'compaction_start' }); });
+  session.on('session.compaction_complete', (event: any) => {
+    send(ws, { type: 'compaction_complete', tokensRemoved: event.data?.tokensRemoved, messagesRemoved: event.data?.messagesRemoved });
+  });
+  session.on('skill.invoked', (event: any) => {
+    send(ws, { type: 'skill_invoked', skillName: event.data?.skillName });
+  });
+  session.on('subagent.failed', (event: any) => {
+    send(ws, { type: 'subagent_failed', agentName: event.data?.agentName, error: event.data?.error });
+  });
+  session.on('subagent.selected', (event: any) => {
+    send(ws, { type: 'subagent_selected', agentName: event.data?.agentName });
+  });
+  session.on('subagent.deselected', (event: any) => {
+    send(ws, { type: 'subagent_deselected', agentName: event.data?.agentName });
+  });
+  session.on('session.model_change', (event: any) => {
+    send(ws, { type: 'model_changed', model: event.data?.model || event.data?.newModel, source: 'sdk' });
+  });
+  session.on('elicitation.requested', (event: any) => {
+    send(ws, { type: 'elicitation_requested', question: event.data?.question, choices: event.data?.choices, allowFreeform: event.data?.allowFreeform });
+  });
+  session.on('elicitation.completed', (event: any) => {
+    send(ws, { type: 'elicitation_completed', answer: event.data?.answer });
+  });
+  session.on('exit_plan_mode.requested', () => { send(ws, { type: 'exit_plan_mode_requested' }); });
+  session.on('exit_plan_mode.completed', () => { send(ws, { type: 'exit_plan_mode_completed' }); });
+}
+
 export function setupWebSocket(
   server: Server,
   sessionMiddleware: SessionMiddleware
@@ -122,294 +202,7 @@ export function setupWebSocket(
                 },
               });
 
-              copilotSession.on(
-                'assistant.message_delta',
-                (event: any) => {
-                  send(ws, {
-                    type: 'delta',
-                    content: event.data.deltaContent,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'assistant.reasoning_delta',
-                (event: any) => {
-                  send(ws, {
-                    type: 'reasoning_delta',
-                    content: event.data.deltaContent,
-                    reasoningId: event.data.reasoningId,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'assistant.reasoning',
-                (event: any) => {
-                  send(ws, {
-                    type: 'reasoning_done',
-                    reasoningId: event.data.reasoningId,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'assistant.intent',
-                (event: any) => {
-                  send(ws, {
-                    type: 'intent',
-                    intent: event.data.intent,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'assistant.turn_start',
-                () => {
-                  send(ws, { type: 'turn_start' });
-                }
-              );
-
-              copilotSession.on(
-                'assistant.turn_end',
-                () => {
-                  send(ws, { type: 'turn_end' });
-                }
-              );
-
-              copilotSession.on(
-                'tool.execution_start',
-                (event: any) => {
-                  send(ws, {
-                    type: 'tool_start',
-                    toolCallId: event.data.toolCallId,
-                    toolName: event.data.toolName,
-                    mcpServerName: event.data.mcpServerName,
-                    mcpToolName: event.data.mcpToolName,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'tool.execution_complete',
-                (event: any) => {
-                  send(ws, {
-                    type: 'tool_end',
-                    toolCallId: event.data.toolCallId,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'tool.execution_progress',
-                (event: any) => {
-                  send(ws, {
-                    type: 'tool_progress',
-                    toolCallId: event.data.toolCallId,
-                    message: event.data.message,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'session.mode_changed',
-                (event: any) => {
-                  send(ws, {
-                    type: 'mode_changed',
-                    mode: event.data.newMode,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'session.error',
-                (event: any) => {
-                  send(ws, {
-                    type: 'error',
-                    message: event.data.message,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'session.title_changed',
-                (event: any) => {
-                  send(ws, {
-                    type: 'title_changed',
-                    title: event.data.title,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'assistant.usage',
-                (event: any) => {
-                  send(ws, {
-                    type: 'usage',
-                    inputTokens: event.data.inputTokens,
-                    outputTokens: event.data.outputTokens,
-                    totalTokens: event.data.totalTokens,
-                    reasoningTokens: event.data.reasoningTokens,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'session.warning',
-                (event: any) => {
-                  send(ws, {
-                    type: 'warning',
-                    message: event.data.message,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'subagent.started',
-                (event: any) => {
-                  send(ws, {
-                    type: 'subagent_start',
-                    agentName: event.data.agentName,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'subagent.completed',
-                (event: any) => {
-                  send(ws, {
-                    type: 'subagent_end',
-                    agentName: event.data.agentName,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'session.info',
-                (event: any) => {
-                  send(ws, {
-                    type: 'info',
-                    message: event.data?.message || event.data,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'session.plan_changed',
-                (event: any) => {
-                  send(ws, {
-                    type: 'plan_changed',
-                    content: event.data?.content,
-                    path: event.data?.path,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'session.compaction_start',
-                () => {
-                  send(ws, { type: 'compaction_start' });
-                }
-              );
-
-              copilotSession.on(
-                'session.compaction_complete',
-                (event: any) => {
-                  send(ws, {
-                    type: 'compaction_complete',
-                    tokensRemoved: event.data?.tokensRemoved,
-                    messagesRemoved: event.data?.messagesRemoved,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'skill.invoked',
-                (event: any) => {
-                  send(ws, {
-                    type: 'skill_invoked',
-                    skillName: event.data?.skillName,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'subagent.failed',
-                (event: any) => {
-                  send(ws, {
-                    type: 'subagent_failed',
-                    agentName: event.data?.agentName,
-                    error: event.data?.error,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'subagent.selected',
-                (event: any) => {
-                  send(ws, {
-                    type: 'subagent_selected',
-                    agentName: event.data?.agentName,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'subagent.deselected',
-                (event: any) => {
-                  send(ws, {
-                    type: 'subagent_deselected',
-                    agentName: event.data?.agentName,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'session.model_change',
-                (event: any) => {
-                  send(ws, {
-                    type: 'model_changed',
-                    model: event.data?.model || event.data?.newModel,
-                    source: 'sdk',
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'elicitation.requested',
-                (event: any) => {
-                  send(ws, {
-                    type: 'elicitation_requested',
-                    question: event.data?.question,
-                    choices: event.data?.choices,
-                    allowFreeform: event.data?.allowFreeform,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'elicitation.completed',
-                (event: any) => {
-                  send(ws, {
-                    type: 'elicitation_completed',
-                    answer: event.data?.answer,
-                  });
-                }
-              );
-
-              copilotSession.on(
-                'exit_plan_mode.requested',
-                () => {
-                  send(ws, { type: 'exit_plan_mode_requested' });
-                }
-              );
-
-              copilotSession.on(
-                'exit_plan_mode.completed',
-                () => {
-                  send(ws, { type: 'exit_plan_mode_completed' });
-                }
-              );
+              wireSessionEvents(copilotSession, ws);
 
               send(ws, { type: 'session_created', model: msg.model });
             } catch (err: any) {
@@ -664,76 +457,7 @@ export function setupWebSocket(
                 },
               });
 
-              // Re-wire all event listeners for the resumed session
-              copilotSession.on('assistant.message_delta', (event: any) => {
-                send(ws, { type: 'delta', content: event.data.deltaContent });
-              });
-              copilotSession.on('assistant.reasoning_delta', (event: any) => {
-                send(ws, { type: 'reasoning_delta', content: event.data.deltaContent, reasoningId: event.data.reasoningId });
-              });
-              copilotSession.on('assistant.reasoning', (event: any) => {
-                send(ws, { type: 'reasoning_done', reasoningId: event.data.reasoningId });
-              });
-              copilotSession.on('assistant.intent', (event: any) => {
-                send(ws, { type: 'intent', intent: event.data.intent });
-              });
-              copilotSession.on('assistant.turn_start', () => { send(ws, { type: 'turn_start' }); });
-              copilotSession.on('assistant.turn_end', () => { send(ws, { type: 'turn_end' }); });
-              copilotSession.on('tool.execution_start', (event: any) => {
-                send(ws, { type: 'tool_start', toolCallId: event.data.toolCallId, toolName: event.data.toolName, mcpServerName: event.data.mcpServerName, mcpToolName: event.data.mcpToolName });
-              });
-              copilotSession.on('tool.execution_complete', (event: any) => {
-                send(ws, { type: 'tool_end', toolCallId: event.data.toolCallId });
-              });
-              copilotSession.on('tool.execution_progress', (event: any) => {
-                send(ws, { type: 'tool_progress', toolCallId: event.data.toolCallId, message: event.data.message });
-              });
-              copilotSession.on('session.mode_changed', (event: any) => {
-                send(ws, { type: 'mode_changed', mode: event.data.newMode });
-              });
-              copilotSession.on('session.error', (event: any) => {
-                send(ws, { type: 'error', message: event.data.message });
-              });
-              copilotSession.on('session.title_changed', (event: any) => {
-                send(ws, { type: 'title_changed', title: event.data.title });
-              });
-              copilotSession.on('assistant.usage', (event: any) => {
-                send(ws, { type: 'usage', inputTokens: event.data.inputTokens, outputTokens: event.data.outputTokens, totalTokens: event.data.totalTokens, reasoningTokens: event.data.reasoningTokens });
-              });
-              copilotSession.on('session.warning', (event: any) => {
-                send(ws, { type: 'warning', message: event.data.message });
-              });
-              copilotSession.on('subagent.started', (event: any) => {
-                send(ws, { type: 'subagent_start', agentName: event.data.agentName });
-              });
-              copilotSession.on('subagent.completed', (event: any) => {
-                send(ws, { type: 'subagent_end', agentName: event.data.agentName });
-              });
-              copilotSession.on('session.info', (event: any) => {
-                send(ws, { type: 'info', message: event.data?.message || event.data });
-              });
-              copilotSession.on('session.plan_changed', (event: any) => {
-                send(ws, { type: 'plan_changed', content: event.data?.content, path: event.data?.path });
-              });
-              copilotSession.on('session.compaction_start', () => { send(ws, { type: 'compaction_start' }); });
-              copilotSession.on('session.compaction_complete', (event: any) => {
-                send(ws, { type: 'compaction_complete', tokensRemoved: event.data?.tokensRemoved, messagesRemoved: event.data?.messagesRemoved });
-              });
-              copilotSession.on('skill.invoked', (event: any) => {
-                send(ws, { type: 'skill_invoked', skillName: event.data?.skillName });
-              });
-              copilotSession.on('subagent.failed', (event: any) => {
-                send(ws, { type: 'subagent_failed', agentName: event.data?.agentName, error: event.data?.error });
-              });
-              copilotSession.on('subagent.selected', (event: any) => {
-                send(ws, { type: 'subagent_selected', agentName: event.data?.agentName });
-              });
-              copilotSession.on('subagent.deselected', (event: any) => {
-                send(ws, { type: 'subagent_deselected', agentName: event.data?.agentName });
-              });
-              copilotSession.on('session.model_change', (event: any) => {
-                send(ws, { type: 'model_changed', model: event.data?.model || event.data?.newModel, source: 'sdk' });
-              });
+              wireSessionEvents(copilotSession, ws);
 
               send(ws, { type: 'session_resumed', sessionId });
             } catch (err: any) {

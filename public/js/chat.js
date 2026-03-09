@@ -14,6 +14,47 @@ const Chat = {
   _spinnerInterval: null,
   sessionReady: false,
   pendingUserInput: false,
+  reasoningEffort: 'medium',
+  customInstructions: '',
+
+  // Regex matching OpenAI o-series and any model advertising extended thinking
+  _reasoningModelRe: /\bo[1-9](-mini|-preview|-pro)?\b|thinking/i,
+
+  // --- localStorage persistence ---
+  _storageKey: 'copilot-cli-settings',
+
+  loadSettings() {
+    try {
+      const raw = localStorage.getItem(this._storageKey);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (s.model) document.getElementById('model-select').value = s.model;
+      if (s.mode) this.syncModeSelect(s.mode);
+      if (s.reasoningEffort && ['low', 'medium', 'high', 'xhigh'].includes(s.reasoningEffort)) {
+        this.reasoningEffort = s.reasoningEffort;
+        document.querySelectorAll('#reasoning-toggle .reasoning-opt').forEach((b) => {
+          b.classList.toggle('active', b.dataset.effort === s.reasoningEffort);
+        });
+      }
+      if (typeof s.customInstructions === 'string') {
+        this.customInstructions = s.customInstructions;
+      }
+    } catch { /* ignore corrupt data */ }
+  },
+
+  saveSettings() {
+    const model = document.getElementById('model-select').value;
+    const modeBtn = document.querySelector('#mode-toggle .mode-opt.active');
+    const mode = modeBtn ? modeBtn.dataset.mode : 'interactive';
+    try {
+      localStorage.setItem(this._storageKey, JSON.stringify({
+        model,
+        mode,
+        reasoningEffort: this.reasoningEffort,
+        customInstructions: this.customInstructions,
+      }));
+    } catch { /* ignore quota errors */ }
+  },
 
 
   connect() {
@@ -281,11 +322,39 @@ const Chat = {
     this.ws.send(JSON.stringify({ type: 'message', content }));
   },
 
+  isReasoningModel(modelId) {
+    return this._reasoningModelRe.test(modelId || '');
+  },
+
+  updateReasoningVisibility(modelId) {
+    const toggle = document.getElementById('reasoning-toggle');
+    if (!toggle) return;
+    toggle.style.display = this.isReasoningModel(modelId) ? '' : 'none';
+  },
+
+  setReasoning(effort) {
+    this.reasoningEffort = effort;
+    document.querySelectorAll('#reasoning-toggle .reasoning-opt').forEach((b) => {
+      b.classList.toggle('active', b.dataset.effort === effort);
+    });
+    this.saveSettings();
+    // Restart session so the new effort takes effect immediately
+    this.newChat();
+  },
+
   requestNewSession() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     const model = document.getElementById('model-select').value;
+    const sessionMsg = { type: 'new_session', model };
+    if (this.isReasoningModel(model)) {
+      sessionMsg.reasoningEffort = this.reasoningEffort;
+    }
+    if (this.customInstructions.trim()) {
+      sessionMsg.customInstructions = this.customInstructions.trim();
+    }
     this.clearSessionTitle();
-    this.ws.send(JSON.stringify({ type: 'new_session', model }));
+    this.saveSettings();
+    this.ws.send(JSON.stringify(sessionMsg));
     this.ws.send(JSON.stringify({ type: 'list_models' }));
   },
 
@@ -381,6 +450,9 @@ const Chat = {
     if (envText) {
       envText.textContent = `${models.length} model${models.length !== 1 ? 's' : ''} available`;
     }
+
+    // Show/hide reasoning effort selector based on selected model
+    this.updateReasoningVisibility(select.value);
   },
 
   addReasoningBlock() {
@@ -532,6 +604,7 @@ const Chat = {
   changeModel(model) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.sessionReady) return;
     this.ws.send(JSON.stringify({ type: 'set_model', model }));
+    this.saveSettings();
   },
 
   showStopButton() {

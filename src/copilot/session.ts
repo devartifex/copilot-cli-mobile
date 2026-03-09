@@ -6,6 +6,7 @@ type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh';
 export interface CreateSessionOptions {
   model?: string;
   reasoningEffort?: ReasoningEffort;
+  customInstructions?: string;
   onUserInputRequest?: SessionConfig['onUserInputRequest'];
 }
 
@@ -33,6 +34,13 @@ export async function createCopilotSession(
 
   if (options.reasoningEffort) {
     sessionConfig.reasoningEffort = options.reasoningEffort;
+  }
+
+  if (options.customInstructions) {
+    sessionConfig.systemMessage = {
+      mode: 'append',
+      content: options.customInstructions,
+    };
   }
 
   if (options.onUserInputRequest) {

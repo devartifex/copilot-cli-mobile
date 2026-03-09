@@ -93,9 +93,14 @@ export function setupWebSocket(
             userInputResolve = null;
 
             try {
+              const customInstructions = typeof msg.customInstructions === 'string'
+                ? msg.customInstructions.slice(0, 2000)
+                : undefined;
+
               copilotSession = await createCopilotSession(client, githubToken, {
                 model: msg.model,
                 reasoningEffort: msg.reasoningEffort,
+                customInstructions,
                 onUserInputRequest: (request) => {
                   return new Promise((resolve) => {
                     userInputResolve = resolve;

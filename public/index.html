@@ -94,12 +94,43 @@
               <select id="model-select" class="pill-select" title="Model">
                 <option value="gpt-4.1">gpt-4.1</option>
               </select>
+              <div class="reasoning-toggle" id="reasoning-toggle" style="display:none" title="Reasoning effort">
+                <button class="reasoning-opt" data-effort="low">low</button>
+                <button class="reasoning-opt active" data-effort="medium">med</button>
+                <button class="reasoning-opt" data-effort="high">high</button>
+                <button class="reasoning-opt" data-effort="xhigh">max</button>
+              </div>
               <button class="action-btn stop-btn" id="stop-btn" title="Stop response" style="display:none">stop</button>
               <button class="action-btn" id="new-chat-btn" title="New session">new</button>
+              <button class="action-btn" id="settings-btn" title="Settings">⚙</button>
               <button class="action-btn danger" id="logout-btn" title="Sign out">quit</button>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div id="settings-overlay" class="settings-overlay" style="display:none">
+    <div class="settings-panel">
+      <div class="settings-header">
+        <span class="settings-title">Settings</span>
+        <button class="settings-close" id="settings-close">✕</button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-section">
+          <label class="settings-label">Custom Instructions</label>
+          <p class="settings-hint">Additional instructions appended to the system prompt. Applied on next new session.</p>
+          <textarea id="settings-instructions" class="settings-textarea" placeholder="e.g. Always respond in Italian. Prefer concise answers." rows="4"></textarea>
+        </div>
+        <div class="settings-section">
+          <label class="settings-label">Defaults</label>
+          <p class="settings-hint">Model, mode, and reasoning selections are saved automatically and restored on reload.</p>
+        </div>
+      </div>
+      <div class="settings-footer">
+        <button class="action-btn" id="settings-save">Save</button>
       </div>
     </div>
   </div>

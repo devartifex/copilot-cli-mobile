@@ -182,6 +182,7 @@ async function runDeviceFlow() {
 }
 
 function initChat(status) {
+  Chat.loadSettings();
   Chat.connect();
 
   const input = document.getElementById('message-input');
@@ -210,6 +211,13 @@ function initChat(status) {
 
   document.getElementById('model-select').addEventListener('change', (e) => {
     Chat.changeModel(e.target.value);
+    Chat.updateReasoningVisibility(e.target.value);
+  });
+
+  document.getElementById('reasoning-toggle').addEventListener('click', (e) => {
+    const btn = e.target.closest('.reasoning-opt');
+    if (!btn || btn.classList.contains('active')) return;
+    Chat.setReasoning(btn.dataset.effort);
   });
 
   document.getElementById('stop-btn').addEventListener('click', () => Chat.abort());
@@ -221,5 +229,34 @@ function initChat(status) {
     document.querySelectorAll('#mode-toggle .mode-opt').forEach((b) => b.classList.remove('active'));
     btn.classList.add('active');
     Chat.setMode(btn.dataset.mode);
+    Chat.saveSettings();
+  });
+
+  // Settings panel
+  const settingsOverlay = document.getElementById('settings-overlay');
+  const settingsInstructions = document.getElementById('settings-instructions');
+
+  // Load saved instructions into textarea
+  settingsInstructions.value = Chat.customInstructions || '';
+
+  document.getElementById('settings-btn').addEventListener('click', () => {
+    settingsInstructions.value = Chat.customInstructions || '';
+    settingsOverlay.style.display = 'flex';
+  });
+
+  document.getElementById('settings-close').addEventListener('click', () => {
+    settingsOverlay.style.display = 'none';
+  });
+
+  // Close on overlay background click
+  settingsOverlay.addEventListener('click', (e) => {
+    if (e.target === settingsOverlay) settingsOverlay.style.display = 'none';
+  });
+
+  document.getElementById('settings-save').addEventListener('click', () => {
+    Chat.customInstructions = settingsInstructions.value;
+    Chat.saveSettings();
+    settingsOverlay.style.display = 'none';
+    Chat.addInfoMessage('Settings saved — applied on next new session');
   });
 }

@@ -11,7 +11,7 @@ permissions:
 
 env:
   AZURE_CONTAINER_REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
-  IMAGE_NAME: copilot-cli-web
+  IMAGE_NAME: copilot-cli-mobile
 
 jobs:
   build-and-deploy:
@@ -38,14 +38,14 @@ jobs:
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v2
         with:
-          containerAppName: copilot-cli-web
+          containerAppName: copilot-cli-mobile
           resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
           imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Health check
         run: |
           FQDN=$(az containerapp show \
-            --name copilot-cli-web \
+            --name copilot-cli-mobile \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --query properties.configuration.ingress.fqdn -o tsv)
           echo "App URL: https://$FQDN"

@@ -12,6 +12,7 @@ const Chat = {
   _renderPending: false,
   _renderTimer: null,
   _spinnerInterval: null,
+  sessionReady: false,
 
 
   connect() {
@@ -59,11 +60,15 @@ const Chat = {
     switch (msg.type) {
       case 'connected':
         document.getElementById('user-badge').textContent = '@' + (msg.user || '');
+        this.sessionReady = false;
+        this.disableInput();
         this.requestNewSession();
         break;
 
       case 'session_created':
+        this.sessionReady = true;
         this.setStatus('connected');
+        this.enableInput();
         break;
 
       case 'turn_start':
@@ -240,7 +245,7 @@ const Chat = {
   },
 
   setMode(mode) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.sessionReady) return;
     this.ws.send(JSON.stringify({ type: 'set_mode', mode }));
   },
 
@@ -249,6 +254,8 @@ const Chat = {
     btns.forEach((b) => {
       b.classList.toggle('active', b.dataset.mode === mode);
     });
+    const statusIndicator = document.getElementById('status-indicator');
+    if (statusIndicator) statusIndicator.dataset.mode = mode;
   },
 
   newChat() {
@@ -260,8 +267,9 @@ const Chat = {
     this.currentReasoningEl = null;
     this.currentReasoningContent = '';
     this.activeTools.clear();
+    this.sessionReady = false;
+    this.disableInput();
     this.requestNewSession();
-    this.enableInput();
   },
 
   addMessage(role, content) {

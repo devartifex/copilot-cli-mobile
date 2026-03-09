@@ -90,7 +90,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
     template: {
       containers: [
         {
-          name: 'copilot-cli-web'
+          name: 'copilot-cli-mobile'
           image: image
           env: [
             { name: 'NODE_ENV', value: 'production' }

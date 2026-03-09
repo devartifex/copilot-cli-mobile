@@ -164,7 +164,7 @@ Check the container logs:
 
 ```bash
 az containerapp logs show \
-  --name copilot-cli-web \
+  --name copilot-cli-mobile \
   --resource-group <resource-group> \
   --type console
 ```

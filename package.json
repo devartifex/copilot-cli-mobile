@@ -1,7 +1,7 @@
 {
-  "name": "copilot-cli-web",
+  "name": "copilot-cli-mobile",
   "version": "2.0.0",
-  "description": "GitHub Copilot CLI from mobile — GitHub OAuth + Copilot SDK",
+  "description": "GitHub Copilot CLI Mobile — GitHub OAuth + Copilot SDK",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

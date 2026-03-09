@@ -9,7 +9,7 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-param containerAppName string = 'copilot-cli-web'
+param containerAppName string = 'copilot-cli-mobile'
 
 @secure()
 @minLength(1)

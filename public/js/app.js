@@ -1,3 +1,43 @@
+// Browser error capture — forwards unhandled errors to the server log
+(function setupErrorCapture() {
+  let errorCount = 0;
+  const MAX_ERRORS = 20;
+
+  function reportError(data) {
+    if (errorCount >= MAX_ERRORS) return;
+    errorCount++;
+    fetch('/api/client-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).catch(() => { /* ignore network failure */ });
+  }
+
+  window.onerror = function (message, source, lineno, colno, error) {
+    reportError({
+      type: 'error',
+      message: String(message).slice(0, 500),
+      source: String(source || '').slice(0, 200),
+      lineno: lineno || 0,
+      colno: colno || 0,
+      stack: (error && error.stack) ? String(error.stack).slice(0, 2000) : '',
+    });
+    return false;
+  };
+
+  window.addEventListener('unhandledrejection', function (event) {
+    const reason = event.reason;
+    reportError({
+      type: 'unhandledrejection',
+      message: (reason instanceof Error) ? reason.message.slice(0, 500) : String(reason).slice(0, 500),
+      source: '',
+      lineno: 0,
+      colno: 0,
+      stack: (reason instanceof Error && reason.stack) ? String(reason.stack).slice(0, 2000) : '',
+    });
+  });
+})();
+
 // App entry point — GitHub device flow auth then chat
 (async function init() {
   fetchAndUpdateSdkVersion();

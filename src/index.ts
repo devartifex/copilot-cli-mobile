@@ -6,6 +6,16 @@ import { config } from './config.js';
 const server = http.createServer(app);
 setupWebSocket(server, sessionMiddleware);
 
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n  Error: Port ${config.port} is already in use.`);
+    console.error(`  Stop the existing process or set a different PORT env var.\n`);
+  } else {
+    console.error('Server error:', err.message);
+  }
+  process.exit(1);
+});
+
 server.listen(config.port, () => {
   console.log('');
   console.log('  Copilot CLI Mobile');

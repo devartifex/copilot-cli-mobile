@@ -2,6 +2,7 @@ FROM node:24-slim AS builder
 
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY scripts/ scripts/
 RUN npm ci
 COPY tsconfig.json ./
 COPY src/ src/

@@ -3,6 +3,7 @@ import { createRequire } from 'module';
 import { requireGitHub } from '../auth/middleware.js';
 import { createCopilotClient } from '../copilot/client.js';
 import { getAvailableModels } from '../copilot/session.js';
+import { logSecurity } from '../security-log.js';
 
 const router = Router();
 
@@ -19,6 +20,20 @@ try {
 // Public — no auth required
 router.get('/version', (_req, res) => {
   res.json({ sdkVersion });
+});
+
+// Receive browser-side errors for server-side logging
+router.post('/client-error', (req, res) => {
+  const { message, source, lineno, colno, stack, type } = req.body ?? {};
+  logSecurity('warn', 'browser_error', {
+    type: String(type || 'error').slice(0, 50),
+    message: String(message || '').slice(0, 500),
+    source: String(source || '').slice(0, 200),
+    lineno: Number(lineno) || 0,
+    colno: Number(colno) || 0,
+    stack: String(stack || '').slice(0, 2000),
+  });
+  res.status(204).end();
 });
 
 router.use(requireGitHub);

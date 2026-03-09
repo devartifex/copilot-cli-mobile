@@ -8,8 +8,12 @@ import { logSecurity } from '../security-log.js';
 type SessionMiddleware = (req: any, res: any, next: () => void) => void;
 
 const MAX_MESSAGE_LENGTH = 10_000;
-const VALID_MESSAGE_TYPES = new Set(['new_session', 'message', 'list_models', 'set_mode']);
+const VALID_MESSAGE_TYPES = new Set([
+  'new_session', 'message', 'list_models', 'set_mode',
+  'abort', 'set_model', 'set_reasoning', 'user_input_response',
+]);
 const VALID_MODES = new Set(['interactive', 'plan', 'autopilot']);
+const VALID_REASONING = new Set(['low', 'medium', 'high', 'xhigh']);
 
 function send(ws: WebSocket, data: Record<string, unknown>): void {
   if (ws.readyState === WebSocket.OPEN) {
@@ -58,12 +62,14 @@ export function setupWebSocket(
     const githubToken: string = session.githubToken;
     const client = createCopilotClient(githubToken);
     let copilotSession: any = null;
+    let userInputResolve: ((response: { answer: string; wasFreeform: boolean }) => void) | null = null;
 
     const cleanup = async () => {
       if (copilotSession) {
-        try { copilotSession.removeAllListeners?.(); } catch { /* ignore */ }
+        try { await copilotSession.destroy(); } catch { /* ignore */ }
         copilotSession = null;
       }
+      userInputResolve = null;
       try { await client.stop(); } catch { /* ignore */ }
     };
 
@@ -81,12 +87,27 @@ export function setupWebSocket(
         switch (msg.type) {
           case 'new_session': {
             if (copilotSession) {
-              try { copilotSession.removeAllListeners?.(); } catch { /* ignore */ }
+              try { await copilotSession.destroy(); } catch { /* ignore */ }
               copilotSession = null;
             }
+            userInputResolve = null;
 
             try {
-              copilotSession = await createCopilotSession(client, githubToken, msg.model);
+              copilotSession = await createCopilotSession(client, githubToken, {
+                model: msg.model,
+                reasoningEffort: msg.reasoningEffort,
+                onUserInputRequest: (request) => {
+                  return new Promise((resolve) => {
+                    userInputResolve = resolve;
+                    send(ws, {
+                      type: 'user_input_request',
+                      question: request.question,
+                      choices: request.choices,
+                      allowFreeform: request.allowFreeform ?? true,
+                    });
+                  });
+                },
+              });
 
               copilotSession.on(
                 'assistant.message_delta',
@@ -187,6 +208,69 @@ export function setupWebSocket(
                 }
               );
 
+              copilotSession.on(
+                'session.error',
+                (event: any) => {
+                  send(ws, {
+                    type: 'error',
+                    message: event.data.message,
+                  });
+                }
+              );
+
+              copilotSession.on(
+                'session.title_changed',
+                (event: any) => {
+                  send(ws, {
+                    type: 'title_changed',
+                    title: event.data.title,
+                  });
+                }
+              );
+
+              copilotSession.on(
+                'assistant.usage',
+                (event: any) => {
+                  send(ws, {
+                    type: 'usage',
+                    inputTokens: event.data.inputTokens,
+                    outputTokens: event.data.outputTokens,
+                    totalTokens: event.data.totalTokens,
+                    reasoningTokens: event.data.reasoningTokens,
+                  });
+                }
+              );
+
+              copilotSession.on(
+                'session.warning',
+                (event: any) => {
+                  send(ws, {
+                    type: 'warning',
+                    message: event.data.message,
+                  });
+                }
+              );
+
+              copilotSession.on(
+                'subagent.started',
+                (event: any) => {
+                  send(ws, {
+                    type: 'subagent_start',
+                    agentName: event.data.agentName,
+                  });
+                }
+              );
+
+              copilotSession.on(
+                'subagent.completed',
+                (event: any) => {
+                  send(ws, {
+                    type: 'subagent_end',
+                    agentName: event.data.agentName,
+                  });
+                }
+              );
+
               send(ws, { type: 'session_created', model: msg.model });
             } catch (err: any) {
               console.error('Session creation error:', err.message);
@@ -241,6 +325,69 @@ export function setupWebSocket(
               console.error('Mode switch error:', err.message);
               send(ws, { type: 'error', message: `Failed to switch mode: ${err.message}` });
             }
+            break;
+          }
+
+          case 'abort': {
+            if (!copilotSession) {
+              send(ws, { type: 'error', message: 'No active session.' });
+              return;
+            }
+            try {
+              await copilotSession.abort();
+              send(ws, { type: 'aborted' });
+            } catch (err: any) {
+              console.error('Abort error:', err.message);
+              send(ws, { type: 'error', message: `Failed to abort: ${err.message}` });
+            }
+            break;
+          }
+
+          case 'set_model': {
+            const newModel = typeof msg.model === 'string' ? msg.model.trim() : '';
+            if (!newModel) {
+              send(ws, { type: 'error', message: 'Model ID is required' });
+              return;
+            }
+            if (!copilotSession) {
+              send(ws, { type: 'error', message: 'No active session. Send new_session first.' });
+              return;
+            }
+            try {
+              await copilotSession.setModel(newModel);
+              send(ws, { type: 'model_changed', model: newModel });
+            } catch (err: any) {
+              console.error('Model change error:', err.message);
+              send(ws, { type: 'error', message: `Failed to change model: ${err.message}` });
+            }
+            break;
+          }
+
+          case 'set_reasoning': {
+            // Reasoning effort can only be set at session creation.
+            // Store it so the next new_session picks it up.
+            const effort = msg.effort as string;
+            if (!effort || !VALID_REASONING.has(effort)) {
+              send(ws, { type: 'error', message: 'Invalid reasoning effort. Use: low, medium, high, or xhigh' });
+              return;
+            }
+            send(ws, { type: 'reasoning_changed', effort });
+            break;
+          }
+
+          case 'user_input_response': {
+            if (!userInputResolve) {
+              send(ws, { type: 'error', message: 'No pending input request' });
+              return;
+            }
+            const answer = typeof msg.answer === 'string' ? msg.answer : '';
+            if (!answer.trim()) {
+              send(ws, { type: 'error', message: 'Answer is required' });
+              return;
+            }
+            const resolve = userInputResolve;
+            userInputResolve = null;
+            resolve({ answer, wasFreeform: msg.wasFreeform ?? true });
             break;
           }
         }

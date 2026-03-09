@@ -28,7 +28,7 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
-    "@github/copilot-sdk": "^0.1.30",
+    "@github/copilot-sdk": "^0.1.32",
     "dotenv": "^16.4.0",
     "express": "^4.21.0",
     "express-rate-limit": "^7.5.0",

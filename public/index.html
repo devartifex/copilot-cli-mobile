@@ -56,7 +56,7 @@
    <span class="cbt">██</span><span class="cbs">│</span>    <span class="cbt">██</span><span class="cbs">│</span>  <span class="cbt">██</span><span class="cbs">│</span><span class="cbt">██</span><span class="cbs">┌──┘</span> <span class="cbt">██</span><span class="cbs">│</span><span class="cbt">██</span><span class="cbs">│</span>    <span class="cbt">██</span><span class="cbs">│</span>  <span class="cbt">██</span><span class="cbs">│</span>  <span class="cbt">██</span><span class="cbs">│</span>     <span class="ch">████</span>     <span class="ce">▄</span>  <span class="ce">▄</span>     <span class="ch">████</span>
    <span class="cbs">└</span><span class="cbt">█████</span><span class="cbs">┐└</span><span class="cbt">█████</span><span class="cbs">┌┘</span><span class="cbt">██</span><span class="cbs">│</span>    <span class="cbt">██</span><span class="cbs">│</span><span class="cbt">██████</span><span class="cbs">┐└</span><span class="cbt">█████</span><span class="cbs">┌┘</span>  <span class="cbt">██</span><span class="cbs">│</span>     <span class="ch">████</span>     <span class="ce">█</span>  <span class="ce">█</span>     <span class="ch">████</span>
     <span class="cbs">└────┘</span> <span class="cbs">└────┘</span> <span class="cbs">└─┘</span>    <span class="cbs">└─┘└─────┘</span> <span class="cbs">└────┘</span>   <span class="cbs">└─┘</span>     <span class="ch">▀███▄</span>            <span class="ch">▄███▀</span>
-<span class="cb">│</span>                        <span class="ct">Copilot SDK v0.1.30</span>                    <span class="ch">▀▀████████████▀▀</span>      <span class="cb">│</span>
+<span class="cb">│</span>                        <span class="ct">Copilot SDK v0.1.32</span>                    <span class="ch">▀▀████████████▀▀</span>      <span class="cb">│</span>
 <span class="cb">└──</span>                                                                         <span class="cb">──┘</span></pre>
           <div class="banner-sub">Describe a task to get started.</div>
           <div class="banner-tip">Tip: Switch modes with the selector below.</div>
@@ -67,6 +67,7 @@
       <!-- Environment info -->
       <div class="env-lines" id="env-lines">
         <div class="term-line"><span class="c-green">●</span> <span class="c-dim">Environment: <span id="env-model-text">1 model</span></span></div>
+        <div class="term-line session-title-line" id="session-title-line" style="display:none"><span class="c-blue">●</span> <span class="c-dim"><span id="session-title-text"></span></span></div>
       </div>
 
       <!-- Messages area -->
@@ -93,6 +94,7 @@
               <select id="model-select" class="pill-select" title="Model">
                 <option value="gpt-4.1">gpt-4.1</option>
               </select>
+              <button class="action-btn stop-btn" id="stop-btn" title="Stop response" style="display:none">stop</button>
               <button class="action-btn" id="new-chat-btn" title="New session">new</button>
               <button class="action-btn danger" id="logout-btn" title="Sign out">quit</button>
             </div>

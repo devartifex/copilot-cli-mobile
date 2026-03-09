@@ -168,7 +168,11 @@ function initChat(status) {
     if (confirm('Sign out?')) Auth.logout();
   });
 
-  document.getElementById('model-select').addEventListener('change', () => Chat.newChat());
+  document.getElementById('model-select').addEventListener('change', (e) => {
+    Chat.changeModel(e.target.value);
+  });
+
+  document.getElementById('stop-btn').addEventListener('click', () => Chat.abort());
 
   // Mode toggle — button group replaces select
   document.getElementById('mode-toggle').addEventListener('click', (e) => {

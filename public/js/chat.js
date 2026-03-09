@@ -13,6 +13,7 @@ const Chat = {
   _renderTimer: null,
   _spinnerInterval: null,
   sessionReady: false,
+  pendingUserInput: false,
 
 
   connect() {
@@ -140,6 +141,7 @@ const Chat = {
         this.currentReasoningEl = null;
         this.currentReasoningContent = '';
         this.activeTools.clear();
+        this.hideStopButton();
         if (msg.type === 'done') this.enableInput();
         break;
 
@@ -151,8 +153,49 @@ const Chat = {
         this.syncModeSelect(msg.mode);
         break;
 
+      case 'title_changed':
+        this.setSessionTitle(msg.title);
+        break;
+
+      case 'usage':
+        this.showUsage(msg);
+        break;
+
+      case 'warning':
+        this.addWarningMessage(msg.message);
+        break;
+
+      case 'model_changed':
+        this.addInfoMessage('Model changed to ' + msg.model);
+        break;
+
+      case 'aborted':
+        this.isStreaming = false;
+        this.flushRender();
+        this.currentAssistantEl = null;
+        this.currentContent = '';
+        this.hideStopButton();
+        this.enableInput();
+        this.addInfoMessage('Response stopped');
+        break;
+
+      case 'user_input_request':
+        this.showUserInputRequest(msg);
+        break;
+
+      case 'subagent_start':
+        this.addSubagentMessage(msg.agentName, 'started');
+        this.scrollToBottom();
+        break;
+
+      case 'subagent_end':
+        this.addSubagentMessage(msg.agentName, 'completed');
+        this.scrollToBottom();
+        break;
+
       case 'error':
         this.addErrorMessage(msg.message);
+        this.hideStopButton();
         this.enableInput();
         this.isStreaming = false;
         this.currentAssistantEl = null;
@@ -233,6 +276,7 @@ const Chat = {
 
     this.addMessage('user', content);
     this.disableInput();
+    this.showStopButton();
 
     this.ws.send(JSON.stringify({ type: 'message', content }));
   },
@@ -240,6 +284,7 @@ const Chat = {
   requestNewSession() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     const model = document.getElementById('model-select').value;
+    this.clearSessionTitle();
     this.ws.send(JSON.stringify({ type: 'new_session', model }));
     this.ws.send(JSON.stringify({ type: 'list_models' }));
   },
@@ -477,6 +522,151 @@ const Chat = {
       window.visualViewport.addEventListener('resize', handler);
       handler();
     }
+  },
+
+  abort() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ type: 'abort' }));
+  },
+
+  changeModel(model) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.sessionReady) return;
+    this.ws.send(JSON.stringify({ type: 'set_model', model }));
+  },
+
+  showStopButton() {
+    const btn = document.getElementById('stop-btn');
+    if (btn) btn.style.display = '';
+  },
+
+  hideStopButton() {
+    const btn = document.getElementById('stop-btn');
+    if (btn) btn.style.display = 'none';
+  },
+
+  setSessionTitle(title) {
+    const line = document.getElementById('session-title-line');
+    const text = document.getElementById('session-title-text');
+    if (line && text && title) {
+      text.textContent = title;
+      line.style.display = '';
+    }
+  },
+
+  clearSessionTitle() {
+    const line = document.getElementById('session-title-line');
+    if (line) line.style.display = 'none';
+  },
+
+  showUsage(msg) {
+    const parts = [];
+    if (msg.inputTokens) parts.push(`in: ${msg.inputTokens}`);
+    if (msg.outputTokens) parts.push(`out: ${msg.outputTokens}`);
+    if (msg.reasoningTokens) parts.push(`reasoning: ${msg.reasoningTokens}`);
+    if (parts.length === 0) return;
+
+    const messagesEl = document.getElementById('messages');
+    const el = document.createElement('div');
+    el.className = 'usage-line';
+    el.textContent = 'tokens — ' + parts.join(' · ');
+    messagesEl.appendChild(el);
+  },
+
+  addWarningMessage(message) {
+    const messagesEl = document.getElementById('messages');
+    const el = document.createElement('div');
+    el.className = 'message warning';
+    el.textContent = '⚠ ' + message;
+    messagesEl.appendChild(el);
+    this.scrollToBottom();
+  },
+
+  addInfoMessage(message) {
+    const messagesEl = document.getElementById('messages');
+    const el = document.createElement('div');
+    el.className = 'info-line';
+    el.textContent = message;
+    messagesEl.appendChild(el);
+    this.scrollToBottom();
+  },
+
+  addSubagentMessage(agentName, status) {
+    const messagesEl = document.getElementById('messages');
+    const el = document.createElement('div');
+    el.className = 'tool-call' + (status === 'completed' ? ' completed' : '');
+    const icon = status === 'completed' ? '✓' : '⠋';
+    const iconClass = status === 'completed' ? 'tool-icon' : 'tool-icon spinner-char';
+    el.innerHTML =
+      '<span class="' + iconClass + '">' + icon + '</span>' +
+      '<span class="tool-name">agent/' + DOMPurify.sanitize(agentName || 'unknown') + '</span>' +
+      '<span class="tool-status">' + status + '</span>';
+    messagesEl.appendChild(el);
+    if (status !== 'completed') this.startSpinners();
+  },
+
+  showUserInputRequest(msg) {
+    this.pendingUserInput = true;
+    const messagesEl = document.getElementById('messages');
+    const el = document.createElement('div');
+    el.className = 'message user-input-request';
+
+    let html = '<div class="user-input-question">' + DOMPurify.sanitize(msg.question) + '</div>';
+
+    if (msg.choices && msg.choices.length > 0) {
+      html += '<div class="user-input-choices">';
+      msg.choices.forEach((choice) => {
+        html += '<button class="user-input-choice">' + DOMPurify.sanitize(choice) + '</button>';
+      });
+      html += '</div>';
+    }
+
+    if (msg.allowFreeform !== false) {
+      html += '<div class="user-input-freeform">'
+        + '<input type="text" class="user-input-text" placeholder="Type your answer…">'
+        + '<button class="user-input-submit">Send</button>'
+        + '</div>';
+    }
+
+    el.innerHTML = html;
+    messagesEl.appendChild(el);
+
+    // Bind choice buttons
+    el.querySelectorAll('.user-input-choice').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.respondToUserInput(btn.textContent, false);
+        el.remove();
+      });
+    });
+
+    // Bind freeform input
+    const textInput = el.querySelector('.user-input-text');
+    const submitBtn = el.querySelector('.user-input-submit');
+    if (textInput && submitBtn) {
+      submitBtn.addEventListener('click', () => {
+        if (textInput.value.trim()) {
+          this.respondToUserInput(textInput.value, true);
+          el.remove();
+        }
+      });
+      textInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (textInput.value.trim()) {
+            this.respondToUserInput(textInput.value, true);
+            el.remove();
+          }
+        }
+      });
+      textInput.focus();
+    }
+
+    this.scrollToBottom();
+  },
+
+  respondToUserInput(answer, wasFreeform) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.pendingUserInput = false;
+    this.ws.send(JSON.stringify({ type: 'user_input_response', answer, wasFreeform }));
   },
 };
 

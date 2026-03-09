@@ -1,12 +1,22 @@
 import { CopilotClient, approveAll } from '@github/copilot-sdk';
+import type { SessionConfig } from '@github/copilot-sdk';
+
+type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh';
+
+export interface CreateSessionOptions {
+  model?: string;
+  reasoningEffort?: ReasoningEffort;
+  onUserInputRequest?: SessionConfig['onUserInputRequest'];
+}
 
 export async function createCopilotSession(
   client: CopilotClient,
   githubToken: string,
-  model?: string
+  options: CreateSessionOptions = {}
 ) {
-  return client.createSession({
-    model: model || 'gpt-4.1',
+  const sessionConfig: SessionConfig = {
+    clientName: 'copilot-cli-mobile',
+    model: options.model || 'gpt-4.1',
     streaming: true,
     onPermissionRequest: approveAll,
     mcpServers: {
@@ -19,7 +29,17 @@ export async function createCopilotSession(
         tools: ['*'],
       },
     },
-  });
+  };
+
+  if (options.reasoningEffort) {
+    sessionConfig.reasoningEffort = options.reasoningEffort;
+  }
+
+  if (options.onUserInputRequest) {
+    sessionConfig.onUserInputRequest = options.onUserInputRequest;
+  }
+
+  return client.createSession(sessionConfig);
 }
 
 export async function getAvailableModels(client: CopilotClient) {

@@ -958,6 +958,108 @@ html, body {
   border-color: var(--red);
 }
 
+/* Stop button */
+.action-btn.stop-btn {
+  color: var(--red);
+  border-color: var(--red);
+}
+.action-btn.stop-btn:active {
+  background: var(--red);
+  color: var(--bg);
+}
+
+/* Usage line */
+.usage-line {
+  font-size: 0.75em;
+  color: var(--fg-dim);
+  opacity: 0.6;
+  padding: 2px var(--sp-2);
+  font-family: var(--font-mono);
+}
+
+/* Warning message */
+.message.warning {
+  color: var(--yellow);
+  font-size: 0.85em;
+  padding: var(--sp-1) var(--sp-2);
+  opacity: 0.9;
+}
+
+/* Info line */
+.info-line {
+  font-size: 0.8em;
+  color: var(--fg-dim);
+  padding: 2px var(--sp-2);
+  font-style: italic;
+  font-family: var(--font-mono);
+}
+
+/* User input request (ask_user) */
+.user-input-request {
+  background: var(--bg-alt);
+  border: 1px solid var(--purple);
+  border-radius: var(--radius);
+  padding: var(--sp-3) !important;
+}
+.user-input-question {
+  margin-bottom: var(--sp-2);
+  color: var(--purple);
+  font-weight: 500;
+}
+.user-input-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-2);
+}
+.user-input-choice {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  color: var(--fg);
+  padding: var(--sp-1) var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.user-input-choice:hover,
+.user-input-choice:active {
+  border-color: var(--purple);
+  color: var(--purple);
+}
+.user-input-freeform {
+  display: flex;
+  gap: var(--sp-1);
+}
+.user-input-text {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--fg);
+  padding: var(--sp-1) var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  outline: none;
+}
+.user-input-text:focus { border-color: var(--purple); }
+.user-input-submit {
+  background: var(--purple);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  padding: var(--sp-1) var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+/* Session title */
+.session-title-line {
+  font-style: italic;
+}
+
 /* ===== CHAT SCREEN LAYOUT ===== */
 #chat-screen {
   display: flex;

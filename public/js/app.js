@@ -94,6 +94,14 @@ async function runDeviceFlow() {
           return;
         }
 
+        if (result.status === 'access_denied') {
+          clearInterval(countdown);
+          clearInterval(spinInterval);
+          if (spinnerEl) spinnerEl.textContent = '✗';
+          statusEl.textContent = 'Access denied — authorization was cancelled on GitHub.';
+          return;
+        }
+
         if (result.status === 'slow_down') {
           interval += 5000;
         }

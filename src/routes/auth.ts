@@ -48,15 +48,33 @@ router.post('/github/device/poll', async (req, res) => {
       return res.json({ status: result.status });
     }
 
+    if (result.status === 'access_denied') {
+      delete req.session.githubDeviceCode;
+      delete req.session.githubDeviceExpiry;
+      return res.json({ status: 'access_denied' });
+    }
+
+    if (result.status === 'expired') {
+      delete req.session.githubDeviceCode;
+      delete req.session.githubDeviceExpiry;
+      return res.json({ status: 'expired' });
+    }
+
     if (!result.token) throw new Error('Token missing in authorized response');
 
     const user = await validateGitHubToken(result.token);
     if (!user) throw new Error('Could not validate GitHub token');
 
-    req.session.githubToken = result.token;
+    // Regenerate session to prevent session fixation, then save before responding
+    const token = result.token;
+    await new Promise<void>((resolve, reject) =>
+      req.session.regenerate((err) => (err ? reject(err) : resolve()))
+    );
+    req.session.githubToken = token;
     req.session.githubUser = user;
-    delete req.session.githubDeviceCode;
-    delete req.session.githubDeviceExpiry;
+    await new Promise<void>((resolve, reject) =>
+      req.session.save((err) => (err ? reject(err) : resolve()))
+    );
 
     res.json({ status: 'authorized', githubUser: user.login });
   } catch (err) {

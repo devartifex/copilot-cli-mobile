@@ -15,7 +15,7 @@ export interface DeviceCodeResponse {
   interval: number;
 }
 
-export type DevicePollStatus = 'pending' | 'slow_down' | 'authorized' | 'error';
+export type DevicePollStatus = 'pending' | 'slow_down' | 'authorized' | 'access_denied' | 'expired';
 
 export async function requestDeviceCode(): Promise<DeviceCodeResponse> {
   const res = await fetch(GITHUB_DEVICE_CODE_URL, {
@@ -46,6 +46,8 @@ export async function pollForToken(
 
   if (data.error === 'authorization_pending') return { status: 'pending' };
   if (data.error === 'slow_down') return { status: 'slow_down' };
+  if (data.error === 'access_denied') return { status: 'access_denied' };
+  if (data.error === 'expired_token') return { status: 'expired' };
   if (data.error) throw new Error(data.error_description || data.error);
 
   return { status: 'authorized', token: data.access_token };

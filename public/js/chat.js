@@ -119,8 +119,7 @@ const Chat = {
         break;
 
       case 'turn_start':
-        // Reset state for a new assistant turn
-        this.currentReasoningEl = null;
+        // Reset state for a new assistant turn — keep existing reasoning block if pre-created
         this.currentReasoningContent = '';
         this.activeTools.clear();
         break;
@@ -145,11 +144,13 @@ const Chat = {
         break;
 
       case 'intent':
+        this.dismissPendingThinking();
         this.addIntentMessage(msg.intent);
         this.scrollToBottom();
         break;
 
       case 'tool_start':
+        this.dismissPendingThinking();
         this.addToolStart(msg);
         this.scrollToBottom();
         break;
@@ -165,6 +166,7 @@ const Chat = {
         break;
 
       case 'delta':
+        this.dismissPendingThinking();
         if (!this.currentAssistantEl) {
           this.currentAssistantEl = this.addMessage('assistant', '');
           this.currentContent = '';
@@ -433,6 +435,11 @@ const Chat = {
     this.disableInput();
     this.showStopButton();
 
+    // Show thinking indicator immediately before server responds
+    this.currentReasoningEl = this.addReasoningBlock();
+    this.currentReasoningContent = '';
+    this.scrollToBottom();
+
     this.ws.send(JSON.stringify({ type: 'message', content }));
   },
 
@@ -666,6 +673,14 @@ const Chat = {
 
     // Show/hide reasoning effort selector based on selected model
     this.updateReasoningVisibility(select.value);
+  },
+
+  // Remove the pre-created thinking block if the response doesn't use reasoning
+  dismissPendingThinking() {
+    if (this.currentReasoningEl && !this.currentReasoningContent) {
+      this.currentReasoningEl.remove();
+      this.currentReasoningEl = null;
+    }
   },
 
   addReasoningBlock() {

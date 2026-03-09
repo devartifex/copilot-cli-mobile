@@ -77,6 +77,13 @@ html, body {
 .c-muted  { color: var(--fg-muted); }
 .c-bold   { font-weight: 700; }
 .c-purple-dim { color: var(--purple-dim); }
+.cb  { color: var(--fg-dim); }
+.ct  { color: var(--cyan); opacity: 0.7; }
+.cbt { color: var(--cyan); font-weight: 700; }
+.cbs { color: var(--fg-dim); }
+.cg  { color: var(--green); }
+.ch  { color: var(--purple); }
+.ce  { color: var(--yellow); font-weight: 700; }
 
 /* ===== SCREEN LAYOUT ===== */
 .screen {

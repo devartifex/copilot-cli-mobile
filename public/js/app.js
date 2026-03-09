@@ -259,4 +259,71 @@ function initChat(status) {
     settingsOverlay.style.display = 'none';
     Chat.addInfoMessage('Settings saved — applied on next new session');
   });
+
+  // Settings accordion sections
+  document.querySelectorAll('.settings-accordion-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const sectionId = btn.dataset.section;
+      const body = document.getElementById(sectionId);
+      if (!body) return;
+      const isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : '';
+      btn.classList.toggle('open', !isOpen);
+
+      // Fetch data when section is opened
+      if (!isOpen && Chat.ws && Chat.ws.readyState === WebSocket.OPEN) {
+        if (sectionId === 'tools-section') {
+          const model = document.getElementById('model-select').value;
+          Chat.ws.send(JSON.stringify({ type: 'list_tools', model }));
+        } else if (sectionId === 'agents-section' && Chat.sessionReady) {
+          Chat.ws.send(JSON.stringify({ type: 'list_agents' }));
+        } else if (sectionId === 'quota-section') {
+          Chat.ws.send(JSON.stringify({ type: 'get_quota' }));
+        } else if (sectionId === 'sessions-section') {
+          Chat.ws.send(JSON.stringify({ type: 'list_sessions' }));
+        }
+      }
+    });
+  });
+
+  // Compact button
+  document.getElementById('compact-btn').addEventListener('click', () => {
+    Chat.requestCompact();
+    settingsOverlay.style.display = 'none';
+  });
+
+  // Plan panel controls
+  document.getElementById('plan-collapse-btn').addEventListener('click', () => {
+    document.getElementById('plan-panel').classList.toggle('collapsed');
+  });
+
+  document.getElementById('plan-edit-btn').addEventListener('click', () => {
+    const contentEl = document.getElementById('plan-content');
+    const editEl = document.getElementById('plan-edit');
+    const textarea = document.getElementById('plan-textarea');
+    textarea.value = contentEl.textContent || '';
+    contentEl.style.display = 'none';
+    editEl.style.display = '';
+  });
+
+  document.getElementById('plan-save-btn').addEventListener('click', () => {
+    const textarea = document.getElementById('plan-textarea');
+    if (Chat.ws && Chat.ws.readyState === WebSocket.OPEN) {
+      Chat.ws.send(JSON.stringify({ type: 'update_plan', content: textarea.value }));
+    }
+    document.getElementById('plan-content').style.display = '';
+    document.getElementById('plan-edit').style.display = 'none';
+  });
+
+  document.getElementById('plan-cancel-btn').addEventListener('click', () => {
+    document.getElementById('plan-content').style.display = '';
+    document.getElementById('plan-edit').style.display = 'none';
+  });
+
+  document.getElementById('plan-delete-btn').addEventListener('click', () => {
+    if (!confirm('Delete the plan?')) return;
+    if (Chat.ws && Chat.ws.readyState === WebSocket.OPEN) {
+      Chat.ws.send(JSON.stringify({ type: 'delete_plan' }));
+    }
+  });
 }

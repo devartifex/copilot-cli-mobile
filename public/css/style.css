@@ -1365,3 +1365,331 @@ html, body {
     max-height: 60vh;
   }
 }
+
+/* ============================================================
+   Settings Accordion Sections
+   ============================================================ */
+.settings-accordion {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.settings-accordion-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-overlay);
+  border: none;
+  color: var(--fg);
+  padding: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  touch-action: manipulation;
+}
+
+.settings-accordion-btn:active {
+  background: var(--border);
+}
+
+.accordion-chevron {
+  color: var(--fg-dim);
+  font-size: 0.8em;
+  transition: transform 0.2s ease;
+}
+
+.settings-accordion-btn.open .accordion-chevron {
+  transform: rotate(90deg);
+}
+
+.settings-accordion-body {
+  padding: var(--sp-3);
+  border-top: 1px solid var(--border);
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+/* ============================================================
+   Tools Management
+   ============================================================ */
+.tools-group {
+  margin-bottom: var(--sp-3);
+}
+
+.tools-group:last-child {
+  margin-bottom: 0;
+}
+
+.tools-group-header {
+  font-size: 0.75em;
+  color: var(--purple);
+  font-weight: 600;
+  margin-bottom: var(--sp-1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tool-item {
+  padding: var(--sp-1) 0;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+}
+
+.tool-item:last-child {
+  border-bottom: none;
+}
+
+.tool-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  cursor: pointer;
+  min-height: 28px;
+}
+
+.tool-toggle-check {
+  accent-color: var(--green);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.tool-toggle-name {
+  font-size: 0.82em;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-toggle-desc {
+  font-size: 0.72em;
+  color: var(--fg-dim);
+  padding-left: 24px;
+  margin-top: 1px;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   Agent Management
+   ============================================================ */
+.agent-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-1);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+  min-height: 36px;
+}
+
+.agent-item:active {
+  background: var(--bg-overlay);
+}
+
+.agent-item.active {
+  background: rgba(210, 168, 255, 0.08);
+  border: 1px solid var(--border-accent);
+}
+
+.agent-name {
+  font-size: 0.85em;
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.agent-desc {
+  font-size: 0.75em;
+  color: var(--fg-dim);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-current {
+  font-size: 0.72em;
+  color: var(--green);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Quota Display
+   ============================================================ */
+.quota-label {
+  font-size: 0.82em;
+  color: var(--fg-muted);
+  margin-bottom: var(--sp-1);
+}
+
+.quota-bar-container {
+  width: 100%;
+  height: 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: var(--sp-1);
+  border: 1px solid var(--border);
+}
+
+.quota-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.quota-bar.quota-green { background: var(--green); }
+.quota-bar.quota-yellow { background: var(--yellow); }
+.quota-bar.quota-red { background: var(--red); }
+
+.quota-text {
+  font-size: 0.75em;
+  color: var(--fg-dim);
+}
+
+.quota-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.quota-dot.quota-green { background: var(--green); }
+.quota-dot.quota-yellow { background: var(--yellow); }
+.quota-dot.quota-red { background: var(--red); }
+
+/* ============================================================
+   Session History
+   ============================================================ */
+.session-item {
+  padding: var(--sp-2) var(--sp-1);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+}
+
+.session-item:last-child {
+  border-bottom: none;
+}
+
+.session-item:active {
+  background: var(--bg-overlay);
+}
+
+.session-item-title {
+  font-size: 0.85em;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-item-meta {
+  display: flex;
+  gap: var(--sp-2);
+  font-size: 0.72em;
+  color: var(--fg-dim);
+  margin-top: 2px;
+}
+
+/* ============================================================
+   Plan Panel
+   ============================================================ */
+.plan-panel {
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-sm);
+  margin: var(--sp-1) 0;
+  background: rgba(110, 64, 201, 0.04);
+  overflow: hidden;
+}
+
+.plan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-title {
+  font-size: 0.82em;
+  color: var(--purple);
+  font-weight: 600;
+}
+
+.plan-actions {
+  display: flex;
+  gap: var(--sp-1);
+  align-items: center;
+}
+
+.plan-collapse-btn {
+  background: none;
+  border: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+  font-size: 0.75em;
+  padding: var(--sp-1);
+  transition: transform 0.2s ease;
+}
+
+.plan-panel.collapsed .plan-collapse-btn {
+  transform: rotate(-90deg);
+}
+
+.plan-panel.collapsed .plan-body {
+  display: none;
+}
+
+.plan-body {
+  padding: var(--sp-2) var(--sp-3);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.plan-content {
+  font-size: 0.82em;
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+.plan-content p { margin-bottom: var(--sp-1); }
+.plan-content ul,
+.plan-content ol { padding-left: var(--sp-4); margin: var(--sp-1) 0; }
+.plan-content li { margin-bottom: 2px; }
+
+.plan-textarea {
+  width: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 80px;
+  outline: none;
+}
+
+.plan-textarea:focus { border-color: var(--purple); }
+
+.plan-edit-actions {
+  display: flex;
+  gap: var(--sp-1);
+  margin-top: var(--sp-2);
+  justify-content: flex-end;
+}
+
+.plan-edit-btn,
+.plan-delete-btn {
+  font-size: 0.75em !important;
+  padding: 2px var(--sp-2) !important;
+  min-height: 22px !important;
+}

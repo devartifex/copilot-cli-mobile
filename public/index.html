@@ -67,7 +67,31 @@
       <!-- Environment info -->
       <div class="env-lines" id="env-lines">
         <div class="term-line"><span class="c-green">●</span> <span class="c-dim">Environment: <span id="env-model-text">1 model</span></span></div>
+        <div class="term-line" id="env-tools-line" style="display:none"><span class="c-cyan">●</span> <span class="c-dim"><span id="env-tools-text"></span></span></div>
+        <div class="term-line" id="env-agent-line" style="display:none"><span class="c-purple">●</span> <span class="c-dim"><span id="env-agent-text"></span></span></div>
         <div class="term-line session-title-line" id="session-title-line" style="display:none"><span class="c-blue">●</span> <span class="c-dim"><span id="session-title-text"></span></span></div>
+      </div>
+
+      <!-- Plan panel (shown in plan mode) -->
+      <div id="plan-panel" class="plan-panel" style="display:none">
+        <div class="plan-header">
+          <span class="plan-title">📋 Plan</span>
+          <div class="plan-actions">
+            <button class="action-btn plan-edit-btn" id="plan-edit-btn">edit</button>
+            <button class="action-btn danger plan-delete-btn" id="plan-delete-btn">delete</button>
+            <button class="plan-collapse-btn" id="plan-collapse-btn">▼</button>
+          </div>
+        </div>
+        <div class="plan-body" id="plan-body">
+          <div class="plan-content" id="plan-content"></div>
+          <div class="plan-edit" id="plan-edit" style="display:none">
+            <textarea class="plan-textarea" id="plan-textarea" rows="6"></textarea>
+            <div class="plan-edit-actions">
+              <button class="action-btn" id="plan-save-btn">save</button>
+              <button class="action-btn" id="plan-cancel-btn">cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Messages area -->
@@ -84,6 +108,7 @@
             <div class="status-left">
               <span id="status-text"></span>
               <span id="user-badge"></span>
+              <span id="quota-indicator" class="quota-dot" style="display:none"></span>
             </div>
             <div class="status-right">
               <div class="mode-toggle" id="mode-toggle">
@@ -124,6 +149,63 @@
           <p class="settings-hint">Additional instructions appended to the system prompt. Applied on next new session.</p>
           <textarea id="settings-instructions" class="settings-textarea" placeholder="e.g. Always respond in Italian. Prefer concise answers." rows="4"></textarea>
         </div>
+
+        <div class="settings-section settings-accordion">
+          <button class="settings-accordion-btn" data-section="tools-section">
+            <span>🔧 Tools</span>
+            <span class="accordion-chevron">▶</span>
+          </button>
+          <div class="settings-accordion-body" id="tools-section" style="display:none">
+            <p class="settings-hint">Toggle tools on/off. Disabled tools are excluded from new sessions.</p>
+            <div id="settings-tools-list" class="settings-list"></div>
+          </div>
+        </div>
+
+        <div class="settings-section settings-accordion">
+          <button class="settings-accordion-btn" data-section="agents-section">
+            <span>🤖 Agents</span>
+            <span class="accordion-chevron">▶</span>
+          </button>
+          <div class="settings-accordion-body" id="agents-section" style="display:none">
+            <p class="settings-hint">Select an agent for the current session.</p>
+            <div id="settings-agents-list" class="settings-list"></div>
+          </div>
+        </div>
+
+        <div class="settings-section settings-accordion">
+          <button class="settings-accordion-btn" data-section="quota-section">
+            <span>📊 Quota</span>
+            <span class="accordion-chevron">▶</span>
+          </button>
+          <div class="settings-accordion-body" id="quota-section" style="display:none">
+            <div id="settings-quota-content" class="settings-list">
+              <div class="settings-hint">Loading quota...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section settings-accordion">
+          <button class="settings-accordion-btn" data-section="sessions-section">
+            <span>📂 Sessions</span>
+            <span class="accordion-chevron">▶</span>
+          </button>
+          <div class="settings-accordion-body" id="sessions-section" style="display:none">
+            <p class="settings-hint">Resume a previous session.</p>
+            <div id="settings-sessions-list" class="settings-list"></div>
+          </div>
+        </div>
+
+        <div class="settings-section settings-accordion">
+          <button class="settings-accordion-btn" data-section="compaction-section">
+            <span>🗜️ Compaction</span>
+            <span class="accordion-chevron">▶</span>
+          </button>
+          <div class="settings-accordion-body" id="compaction-section" style="display:none">
+            <p class="settings-hint">Compact the current conversation to reduce token usage.</p>
+            <button class="action-btn" id="compact-btn">Compact Now</button>
+          </div>
+        </div>
+
         <div class="settings-section">
           <label class="settings-label">Defaults</label>
           <p class="settings-hint">Model, mode, and reasoning selections are saved automatically and restored on reload.</p>

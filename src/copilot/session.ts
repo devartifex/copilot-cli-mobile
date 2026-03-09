@@ -7,6 +7,8 @@ export interface CreateSessionOptions {
   model?: string;
   reasoningEffort?: ReasoningEffort;
   customInstructions?: string;
+  excludedTools?: string[];
+  availableTools?: string[];
   onUserInputRequest?: SessionConfig['onUserInputRequest'];
 }
 
@@ -34,6 +36,14 @@ export async function createCopilotSession(
 
   if (options.reasoningEffort) {
     sessionConfig.reasoningEffort = options.reasoningEffort;
+  }
+
+  if (options.excludedTools && options.excludedTools.length > 0) {
+    sessionConfig.excludedTools = options.excludedTools;
+  }
+
+  if (options.availableTools && options.availableTools.length > 0) {
+    sessionConfig.availableTools = options.availableTools;
   }
 
   if (options.customInstructions) {

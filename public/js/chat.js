@@ -16,9 +16,9 @@ const Chat = {
   pendingUserInput: false,
   reasoningEffort: 'medium',
   customInstructions: '',
-
-  // Regex matching OpenAI o-series and any model advertising extended thinking
-  _reasoningModelRe: /\bo[1-9](-mini|-preview|-pro)?\b|thinking/i,
+  excludedTools: [],
+  modelsMap: new Map(),
+  currentAgent: null,
 
   // --- localStorage persistence ---
   _storageKey: 'copilot-cli-settings',
@@ -32,12 +32,12 @@ const Chat = {
       if (s.mode) this.syncModeSelect(s.mode);
       if (s.reasoningEffort && ['low', 'medium', 'high', 'xhigh'].includes(s.reasoningEffort)) {
         this.reasoningEffort = s.reasoningEffort;
-        document.querySelectorAll('#reasoning-toggle .reasoning-opt').forEach((b) => {
-          b.classList.toggle('active', b.dataset.effort === s.reasoningEffort);
-        });
       }
       if (typeof s.customInstructions === 'string') {
         this.customInstructions = s.customInstructions;
+      }
+      if (Array.isArray(s.excludedTools)) {
+        this.excludedTools = s.excludedTools;
       }
     } catch { /* ignore corrupt data */ }
   },
@@ -52,6 +52,7 @@ const Chat = {
         mode,
         reasoningEffort: this.reasoningEffort,
         customInstructions: this.customInstructions,
+        excludedTools: this.excludedTools,
       }));
     } catch { /* ignore quota errors */ }
   },
@@ -207,6 +208,16 @@ const Chat = {
         break;
 
       case 'model_changed':
+        if (msg.source === 'sdk') {
+          // SDK-initiated model switch — update the dropdown
+          const modelSelect = document.getElementById('model-select');
+          if (modelSelect && msg.model) {
+            if ([...modelSelect.options].some((o) => o.value === msg.model)) {
+              modelSelect.value = msg.model;
+            }
+            this.updateReasoningVisibility(msg.model);
+          }
+        }
         this.addInfoMessage('Model changed to ' + msg.model);
         break;
 
@@ -240,6 +251,105 @@ const Chat = {
         this.enableInput();
         this.isStreaming = false;
         this.currentAssistantEl = null;
+        break;
+
+      case 'tools':
+        this.handleToolsList(msg.tools);
+        break;
+
+      case 'agents':
+        this.handleAgentsList(msg.agents, msg.current);
+        break;
+
+      case 'agent_changed':
+        this.currentAgent = msg.agent;
+        this.updateAgentIndicator();
+        this.addInfoMessage(msg.agent ? 'Agent selected: @' + msg.agent : 'Agent deselected');
+        break;
+
+      case 'quota':
+        this.handleQuota(msg);
+        break;
+
+      case 'sessions':
+        this.handleSessionsList(msg.sessions);
+        break;
+
+      case 'session_resumed':
+        this.sessionReady = true;
+        this.setStatus('connected');
+        this.enableInput();
+        this.addInfoMessage('Session resumed: ' + msg.sessionId);
+        break;
+
+      case 'plan':
+        this.handlePlan(msg);
+        break;
+
+      case 'plan_changed':
+        this.addInfoMessage('Plan updated');
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({ type: 'get_plan' }));
+        }
+        break;
+
+      case 'plan_updated':
+        this.addInfoMessage('Plan saved');
+        break;
+
+      case 'plan_deleted':
+        this.addInfoMessage('Plan deleted');
+        this.handlePlan({ exists: false });
+        break;
+
+      case 'compaction_start':
+        this.addInfoMessage('Compacting conversation…');
+        break;
+
+      case 'compaction_complete':
+        this.addInfoMessage('Compaction complete' +
+          (msg.tokensRemoved ? ': removed ' + msg.tokensRemoved + ' tokens' : '') +
+          (msg.messagesRemoved ? ', ' + msg.messagesRemoved + ' messages' : ''));
+        break;
+
+      case 'compaction_result':
+        this.addInfoMessage('Compaction result' +
+          (msg.tokensRemoved ? ': removed ' + msg.tokensRemoved + ' tokens' : '') +
+          (msg.messagesRemoved ? ', ' + msg.messagesRemoved + ' messages' : ''));
+        break;
+
+      case 'skill_invoked':
+        this.addSkillMessage(msg.skillName);
+        break;
+
+      case 'subagent_failed':
+        this.addErrorMessage('Sub-agent ' + (msg.agentName || 'unknown') + ' failed' + (msg.error ? ': ' + msg.error : ''));
+        break;
+
+      case 'subagent_selected':
+        this.currentAgent = msg.agentName;
+        this.updateAgentIndicator();
+        break;
+
+      case 'subagent_deselected':
+        this.currentAgent = null;
+        this.updateAgentIndicator();
+        break;
+
+      case 'info':
+        this.addInfoMessage(msg.message || 'Info');
+        break;
+
+      case 'elicitation_requested':
+        this.showUserInputRequest(msg);
+        break;
+
+      case 'exit_plan_mode_requested':
+        this.addInfoMessage('Exiting plan mode…');
+        break;
+
+      case 'exit_plan_mode_completed':
+        this.addInfoMessage('Exited plan mode');
         break;
     }
   },
@@ -323,13 +433,62 @@ const Chat = {
   },
 
   isReasoningModel(modelId) {
-    return this._reasoningModelRe.test(modelId || '');
+    const model = this.modelsMap.get(modelId);
+    if (model && model.capabilities) {
+      return model.capabilities.supports && model.capabilities.supports.reasoningEffort === true;
+    }
+    // Fallback regex for when modelsMap is not yet populated
+    return /\bo[1-9](-mini|-preview|-pro)?\b|thinking/i.test(modelId || '');
   },
 
   updateReasoningVisibility(modelId) {
     const toggle = document.getElementById('reasoning-toggle');
     if (!toggle) return;
-    toggle.style.display = this.isReasoningModel(modelId) ? '' : 'none';
+    const isReasoning = this.isReasoningModel(modelId);
+    toggle.style.display = isReasoning ? '' : 'none';
+
+    if (isReasoning) {
+      const model = this.modelsMap.get(modelId);
+      this.buildReasoningButtons(model);
+    }
+  },
+
+  buildReasoningButtons(model) {
+    const toggle = document.getElementById('reasoning-toggle');
+    if (!toggle) return;
+
+    const supportedEfforts = (model && model.supportedReasoningEfforts) || ['low', 'medium', 'high', 'xhigh'];
+    const defaultEffort = (model && model.defaultReasoningEffort) || 'medium';
+
+    const effortLabels = { low: 'low', medium: 'med', high: 'high', xhigh: 'max' };
+
+    // Only rebuild if the effort options differ
+    const currentEfforts = [...toggle.querySelectorAll('.reasoning-opt')].map((b) => b.dataset.effort);
+    const sameEfforts = supportedEfforts.length === currentEfforts.length &&
+      supportedEfforts.every((e, i) => e === currentEfforts[i]);
+    if (sameEfforts) return;
+
+    toggle.innerHTML = '';
+    supportedEfforts.forEach((effort) => {
+      const btn = document.createElement('button');
+      btn.className = 'reasoning-opt';
+      btn.dataset.effort = effort;
+      btn.textContent = effortLabels[effort] || effort;
+      // Use saved preference, or model default
+      if (effort === this.reasoningEffort && supportedEfforts.includes(this.reasoningEffort)) {
+        btn.classList.add('active');
+      } else if (!supportedEfforts.includes(this.reasoningEffort) && effort === defaultEffort) {
+        btn.classList.add('active');
+        this.reasoningEffort = defaultEffort;
+      }
+      toggle.appendChild(btn);
+    });
+
+    // Ensure at least one is active
+    if (!toggle.querySelector('.reasoning-opt.active') && toggle.firstChild) {
+      toggle.firstChild.classList.add('active');
+      this.reasoningEffort = toggle.firstChild.dataset.effort;
+    }
   },
 
   setReasoning(effort) {
@@ -351,6 +510,9 @@ const Chat = {
     }
     if (this.customInstructions.trim()) {
       sessionMsg.customInstructions = this.customInstructions.trim();
+    }
+    if (this.excludedTools.length > 0) {
+      sessionMsg.excludedTools = this.excludedTools;
     }
     this.clearSessionTitle();
     this.saveSettings();
@@ -431,13 +593,44 @@ const Chat = {
 
     const currentValue = select.value;
     select.innerHTML = '';
+    this.modelsMap.clear();
 
     models.forEach((model) => {
-      const name = typeof model === 'string' ? model : model.id || model.name;
-      if (!name) return;
+      const id = typeof model === 'string' ? model : model.id || model.name;
+      if (!id) return;
+
+      // Store full model info object
+      if (typeof model === 'object') {
+        this.modelsMap.set(id, model);
+      }
+
       const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
+      opt.value = id;
+
+      // Build display label with capability hints
+      let label = id;
+      if (typeof model === 'object') {
+        const hints = [];
+        if (model.capabilities?.supports?.vision) hints.push('👁');
+        if (model.capabilities?.supports?.reasoningEffort) hints.push('🧠');
+        if (model.billing?.multiplier && model.billing.multiplier > 1) hints.push(model.billing.multiplier + '×');
+        if (hints.length > 0) label += ' ' + hints.join('');
+      }
+      opt.textContent = label;
+
+      // Add tooltip with full model info
+      if (typeof model === 'object' && model.capabilities) {
+        const parts = [];
+        const limits = model.capabilities.limits;
+        if (limits?.max_context_window_tokens) parts.push('Context: ' + (limits.max_context_window_tokens / 1000) + 'k');
+        if (limits?.max_prompt_tokens) parts.push('Max prompt: ' + (limits.max_prompt_tokens / 1000) + 'k');
+        if (model.capabilities.supports?.vision) parts.push('Vision: yes');
+        if (model.capabilities.supports?.reasoningEffort) parts.push('Reasoning: yes');
+        if (model.billing?.multiplier) parts.push('Billing: ' + model.billing.multiplier + '×');
+        if (model.supportedReasoningEfforts) parts.push('Efforts: ' + model.supportedReasoningEfforts.join(', '));
+        opt.title = parts.join(' | ');
+      }
+
       select.appendChild(opt);
     });
 
@@ -740,6 +933,248 @@ const Chat = {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     this.pendingUserInput = false;
     this.ws.send(JSON.stringify({ type: 'user_input_response', answer, wasFreeform }));
+  },
+
+  // --- Tools management ---
+  handleToolsList(tools) {
+    const container = document.getElementById('settings-tools-list');
+    if (!container) return;
+
+    container.innerHTML = '';
+    if (!tools || tools.length === 0) {
+      container.innerHTML = '<div class="settings-hint">No tools available</div>';
+      return;
+    }
+
+    // Group tools by source (MCP server vs built-in)
+    const grouped = {};
+    tools.forEach((tool) => {
+      const group = tool.mcpServerName || 'built-in';
+      if (!grouped[group]) grouped[group] = [];
+      grouped[group].push(tool);
+    });
+
+    Object.keys(grouped).sort().forEach((groupName) => {
+      const groupEl = document.createElement('div');
+      groupEl.className = 'tools-group';
+      const groupHeader = document.createElement('div');
+      groupHeader.className = 'tools-group-header';
+      groupHeader.textContent = groupName;
+      groupEl.appendChild(groupHeader);
+
+      grouped[groupName].forEach((tool) => {
+        const toolName = tool.name || tool.toolName || 'unknown';
+        const toolEl = document.createElement('div');
+        toolEl.className = 'tool-item';
+        const isExcluded = this.excludedTools.includes(toolName);
+
+        toolEl.innerHTML =
+          '<label class="tool-toggle-label">' +
+          '<input type="checkbox" class="tool-toggle-check" data-tool="' + DOMPurify.sanitize(toolName) + '" ' + (isExcluded ? '' : 'checked') + '>' +
+          '<span class="tool-toggle-slider"></span>' +
+          '<span class="tool-toggle-name">' + DOMPurify.sanitize(toolName) + '</span>' +
+          '</label>' +
+          (tool.description ? '<div class="tool-toggle-desc">' + DOMPurify.sanitize(tool.description) + '</div>' : '');
+
+        const checkbox = toolEl.querySelector('.tool-toggle-check');
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) {
+            this.excludedTools = this.excludedTools.filter((t) => t !== toolName);
+          } else {
+            if (!this.excludedTools.includes(toolName)) {
+              this.excludedTools.push(toolName);
+            }
+          }
+          this.saveSettings();
+          this.updateToolCount(tools.length);
+        });
+
+        groupEl.appendChild(toolEl);
+      });
+
+      container.appendChild(groupEl);
+    });
+
+    this.updateToolCount(tools.length);
+  },
+
+  updateToolCount(totalTools) {
+    const activeCount = totalTools - this.excludedTools.length;
+    const envToolsEl = document.getElementById('env-tools-text');
+    if (envToolsEl) {
+      envToolsEl.textContent = activeCount + ' tool' + (activeCount !== 1 ? 's' : '') + ' active';
+      const toolsLine = document.getElementById('env-tools-line');
+      if (toolsLine) toolsLine.style.display = '';
+    }
+  },
+
+  // --- Agent management ---
+  handleAgentsList(agents, current) {
+    this.currentAgent = current;
+    this.updateAgentIndicator();
+
+    const container = document.getElementById('settings-agents-list');
+    if (!container) return;
+
+    container.innerHTML = '';
+    if (!agents || agents.length === 0) {
+      container.innerHTML = '<div class="settings-hint">No agents available</div>';
+      return;
+    }
+
+    agents.forEach((agent) => {
+      const name = agent.name || agent;
+      const el = document.createElement('div');
+      el.className = 'agent-item' + (current === name ? ' active' : '');
+      el.innerHTML =
+        '<span class="agent-name">' + DOMPurify.sanitize(name) + '</span>' +
+        (agent.description ? '<span class="agent-desc">' + DOMPurify.sanitize(agent.description) + '</span>' : '') +
+        (current === name ? '<span class="agent-current">current</span>' : '');
+
+      el.addEventListener('click', () => {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        if (current === name) {
+          this.ws.send(JSON.stringify({ type: 'deselect_agent' }));
+        } else {
+          this.ws.send(JSON.stringify({ type: 'select_agent', name }));
+        }
+      });
+
+      container.appendChild(el);
+    });
+  },
+
+  updateAgentIndicator() {
+    const el = document.getElementById('env-agent-text');
+    const line = document.getElementById('env-agent-line');
+    if (el && line) {
+      if (this.currentAgent) {
+        el.textContent = 'agent: @' + this.currentAgent;
+        line.style.display = '';
+      } else {
+        line.style.display = 'none';
+      }
+    }
+  },
+
+  // --- Quota management ---
+  handleQuota(data) {
+    const container = document.getElementById('settings-quota-content');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (data.chat) {
+      const quota = data.chat;
+      const used = quota.percentageUsed ?? 0;
+      const remaining = 100 - used;
+      const colorClass = used > 80 ? 'quota-red' : used > 50 ? 'quota-yellow' : 'quota-green';
+
+      container.innerHTML =
+        '<div class="quota-label">Chat quota</div>' +
+        '<div class="quota-bar-container">' +
+        '<div class="quota-bar ' + colorClass + '" style="width: ' + Math.min(used, 100) + '%"></div>' +
+        '</div>' +
+        '<div class="quota-text">' + Math.round(remaining) + '% remaining' +
+        (quota.resetDate ? ' · resets ' + new Date(quota.resetDate).toLocaleDateString() : '') +
+        '</div>';
+
+      this.updateQuotaIndicator(used);
+    } else {
+      container.innerHTML = '<div class="settings-hint">Quota info not available</div>';
+    }
+  },
+
+  updateQuotaIndicator(percentUsed) {
+    const el = document.getElementById('quota-indicator');
+    if (!el) return;
+    el.style.display = '';
+    el.className = 'quota-dot';
+    if (percentUsed > 80) {
+      el.classList.add('quota-red');
+    } else if (percentUsed > 50) {
+      el.classList.add('quota-yellow');
+    } else {
+      el.classList.add('quota-green');
+    }
+  },
+
+  // --- Session history ---
+  handleSessionsList(sessions) {
+    const container = document.getElementById('settings-sessions-list');
+    if (!container) return;
+
+    container.innerHTML = '';
+    if (!sessions || sessions.length === 0) {
+      container.innerHTML = '<div class="settings-hint">No previous sessions</div>';
+      return;
+    }
+
+    sessions.forEach((session) => {
+      const el = document.createElement('div');
+      el.className = 'session-item';
+      const title = session.title || session.id || 'Untitled';
+      const date = session.updatedAt ? new Date(session.updatedAt).toLocaleString() : '';
+      const model = session.model || '';
+
+      el.innerHTML =
+        '<div class="session-item-title">' + DOMPurify.sanitize(title) + '</div>' +
+        '<div class="session-item-meta">' +
+        (model ? '<span>' + DOMPurify.sanitize(model) + '</span>' : '') +
+        (date ? '<span>' + date + '</span>' : '') +
+        '</div>';
+
+      el.addEventListener('click', () => {
+        if (!confirm('Resume this session? Current conversation will be replaced.')) return;
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        const messagesEl = document.getElementById('messages');
+        messagesEl.innerHTML = '';
+        this.ws.send(JSON.stringify({ type: 'resume_session', sessionId: session.id }));
+        document.getElementById('settings-overlay').style.display = 'none';
+      });
+
+      container.appendChild(el);
+    });
+  },
+
+  // --- Plan management ---
+  handlePlan(data) {
+    const panel = document.getElementById('plan-panel');
+    if (!panel) return;
+
+    if (data.exists && data.content) {
+      panel.style.display = '';
+      const contentEl = document.getElementById('plan-content');
+      if (contentEl) {
+        try {
+          const rawHtml = marked.parse(data.content, { breaks: true, gfm: true });
+          contentEl.innerHTML = DOMPurify.sanitize(rawHtml);
+        } catch {
+          contentEl.textContent = data.content;
+        }
+      }
+    } else {
+      panel.style.display = 'none';
+    }
+  },
+
+  // --- Compaction ---
+  requestCompact() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.sessionReady) return;
+    this.ws.send(JSON.stringify({ type: 'compact' }));
+  },
+
+  // --- Skill display ---
+  addSkillMessage(skillName) {
+    const messagesEl = document.getElementById('messages');
+    const el = document.createElement('div');
+    el.className = 'tool-call completed';
+    el.innerHTML =
+      '<span class="tool-icon">⚡</span>' +
+      '<span class="tool-name">skill/' + DOMPurify.sanitize(skillName || 'unknown') + '</span>' +
+      '<span class="tool-status">invoked</span>';
+    messagesEl.appendChild(el);
+    this.scrollToBottom();
   },
 };
 

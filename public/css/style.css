@@ -81,9 +81,9 @@ html, body {
 .ct  { color: var(--cyan); opacity: 0.7; }
 .cbt { color: var(--cyan); font-weight: 700; }
 .cbs { color: var(--fg-dim); }
-.cg  { color: var(--green); }
+.cg  { color: var(--cyan); }
 .ch  { color: var(--purple); }
-.ce  { color: var(--yellow); font-weight: 700; }
+.ce  { color: var(--green); font-weight: 700; }
 
 /* ===== SCREEN LAYOUT ===== */
 .screen {

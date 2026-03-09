@@ -5,3 +5,6 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+public/js/bundle.js
+test-results/
+playwright-report/

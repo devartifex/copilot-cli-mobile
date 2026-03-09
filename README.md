@@ -65,6 +65,16 @@ Requires Node.js 24+ (the SDK needs `node:sqlite`).
 npm install && npm run build && npm start
 ```
 
+`npm run build` compiles both the **server** (`tsc` → `dist/`) and the **client** (`esbuild` → `public/js/bundle.js`) in a single step.
+
+### Development
+
+```bash
+npm run dev:local    # tsx watch (server hot-reload, serves existing bundle)
+npm run build:client # rebuild client bundle after src/client changes
+npm run lint         # TypeScript type-check + ESLint naming conventions
+```
+
 ---
 
 ## Configuration
@@ -192,6 +202,11 @@ src/
 ├── auth/
 │   ├── github.ts         # Device Flow OAuth
 │   └── middleware.ts     # Session guard + token freshness
+├── client/               # Client-side TypeScript (compiled → public/js/bundle.js)
+│   ├── globals.d.ts      # Declarations for CDN globals (marked, DOMPurify, hljs)
+│   ├── auth.ts           # Auth module (device flow API)
+│   ├── chat.ts           # WebSocket client + markdown rendering
+│   └── app.ts            # App entry point (imports auth + chat)
 ├── copilot/
 │   ├── client.ts         # CopilotClient factory
 │   └── session.ts        # SessionConfig builder
@@ -207,12 +222,28 @@ public/
 ├── index.html            # SPA shell (login + chat)
 ├── css/style.css         # Dark theme, mobile-first
 └── js/
-    ├── app.js            # Init + auth orchestration
-    ├── auth.js           # Device flow client
-    └── chat.js           # WebSocket + markdown rendering
+    └── bundle.js         # Generated — compiled + bundled from src/client/ (esbuild)
 ```
 
 </details>
+
+---
+
+## Naming Conventions
+
+All code follows these conventions, enforced by ESLint (`npm run lint`):
+
+| Scope | Convention | Examples |
+|-------|-----------|---------|
+| Variables / functions | `camelCase` | `createSession`, `githubToken` |
+| Types / interfaces | `PascalCase` | `SessionConfig`, `AuthStatus` |
+| Constants | `UPPER_SNAKE_CASE` | `MAX_ERRORS`, `SESSION_SECRET` |
+| CSS classes | `kebab-case` | `.banner-title`, `.mode-opt` |
+| Files / directories | `kebab-case` | `security-log.ts`, `src/client/` |
+| URL routes | `kebab-case` | `/auth/github/device/start` |
+| Environment variables | `UPPER_SNAKE_CASE` | `GITHUB_CLIENT_ID`, `BASE_URL` |
+
+Run `npm run lint` to check for violations.
 
 ---
 

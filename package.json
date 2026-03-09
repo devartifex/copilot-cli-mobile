@@ -4,15 +4,16 @@
   "description": "Copilot CLI Mobile — GitHub OAuth + Copilot SDK",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:client",
+    "build:client": "esbuild src/client/app.ts --bundle --outfile=public/js/bundle.js --format=iife --platform=browser --target=es2022",
     "start": "node dist/index.js",
     "dev": "docker compose up --build",
     "dev:local": "tsx watch src/index.ts",
     "dev:down": "docker compose down",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json && eslint src/",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist public/js/bundle.js",
     "postinstall": "node scripts/patch-sdk.mjs"
   },
   "keywords": [
@@ -39,12 +40,18 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.58.2",
     "@types/express": "^4.17.21",
     "@types/express-session": "^1.18.0",
     "@types/node": "^20.17.0",
     "@types/session-file-store": "^1.2.6",
     "@types/ws": "^8.5.13",
+    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.0",
+    "esbuild": "^0.27.3",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }

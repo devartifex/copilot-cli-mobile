@@ -4,8 +4,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY scripts/ scripts/
 RUN npm ci
-COPY tsconfig.json ./
+COPY tsconfig.json tsconfig.client.json ./
 COPY src/ src/
+COPY public/ public/
 RUN npm run build && npm prune --omit=dev
 
 FROM node:24-slim
@@ -18,8 +19,9 @@ WORKDIR /app
 
 COPY --from=builder /app/node_modules node_modules/
 COPY --from=builder /app/dist dist/
+# Copy public/ from builder so the generated bundle.js (esbuild output) is included
+COPY --from=builder /app/public public/
 COPY package.json ./
-COPY public/ public/
 
 ENV NODE_ENV=production
 ENV PORT=3000

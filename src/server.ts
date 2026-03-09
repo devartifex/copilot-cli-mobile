@@ -22,7 +22,7 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
-        connectSrc: ["'self'", 'ws:', 'wss:'],
+        connectSrc: ["'self'", 'ws:', 'wss:', 'https://cdn.jsdelivr.net'],
         imgSrc: ["'self'", 'data:', 'https://avatars.githubusercontent.com'],
         fontSrc: ["'self'", 'https://cdn.jsdelivr.net'],
         frameAncestors: ["'none'"],

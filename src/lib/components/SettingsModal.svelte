@@ -4,7 +4,9 @@
     AgentInfo,
     QuotaSnapshots,
     QuotaSnapshot,
+    CustomToolDefinition,
   } from '$lib/types/index.js';
+  import CustomToolsEditor from './CustomToolsEditor.svelte';
 
   interface Props {
     open: boolean;
@@ -14,9 +16,11 @@
     quotaSnapshots: QuotaSnapshots | null;
     customInstructions: string;
     excludedTools: string[];
+    customTools: CustomToolDefinition[];
     onClose: () => void;
     onSaveInstructions: (instructions: string) => void;
     onToggleTool: (toolName: string, enabled: boolean) => void;
+    onSaveCustomTools: (tools: CustomToolDefinition[]) => void;
     onSelectAgent: (name: string) => void;
     onDeselectAgent: () => void;
     onCompact: () => void;
@@ -33,9 +37,11 @@
     quotaSnapshots,
     customInstructions,
     excludedTools,
+    customTools,
     onClose,
     onSaveInstructions,
     onToggleTool,
+    onSaveCustomTools,
     onSelectAgent,
     onDeselectAgent,
     onCompact,
@@ -44,7 +50,7 @@
     onFetchQuota,
   }: Props = $props();
 
-  type AccordionSection = 'instructions' | 'tools' | 'agents' | 'quota' | 'compact' | null;
+  type AccordionSection = 'instructions' | 'tools' | 'custom-tools' | 'agents' | 'quota' | 'compact' | null;
 
   let activeSection = $state<AccordionSection>(null);
   let instructionsDraft = $state('');
@@ -254,6 +260,26 @@
                   </div>
                 {/each}
               {/if}
+            </div>
+          {/if}
+        </div>
+
+        <!-- Custom Tools -->
+        <div class="settings-accordion">
+          <button
+            class="settings-accordion-btn"
+            class:open={activeSection === 'custom-tools'}
+            onclick={() => toggleSection('custom-tools')}
+          >
+            Custom Tools
+            <span class="accordion-chevron">▸</span>
+          </button>
+          {#if activeSection === 'custom-tools'}
+            <div class="settings-accordion-body">
+              <p class="settings-hint">
+                Define webhook-based tools that Copilot can invoke during conversations.
+              </p>
+              <CustomToolsEditor tools={customTools} onSave={onSaveCustomTools} />
             </div>
           {/if}
         </div>

@@ -154,6 +154,7 @@
 
   function handleUserInputResponse(answer: string, wasFreeform: boolean): void {
     wsStore.respondToUserInput(answer, wasFreeform);
+    chatStore.clearPendingUserInput();
   }
 
   function handlePermissionResponse(requestId: string, decision: 'allow' | 'deny' | 'always_allow'): void {

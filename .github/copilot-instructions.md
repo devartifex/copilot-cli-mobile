@@ -1,4 +1,4 @@
-# Copilot Hub — Project Instructions
+# Copilot CLI Mobile — Project Instructions
 
 ## Project Overview
 

@@ -1,7 +1,7 @@
 {
-  "name": "copilot-hub",
+  "name": "copilot-cli-mobile",
   "version": "2.0.0",
-  "description": "Copilot Hub — Self-hosted multi-model AI chat powered by the GitHub Copilot SDK",
+  "description": "Copilot CLI Mobile — Self-hosted multi-model AI chat powered by the GitHub Copilot SDK",
   "main": "build/index.js",
   "scripts": {
     "build:server": "tsc -p tsconfig.node.json",

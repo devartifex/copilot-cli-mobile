@@ -1,4 +1,4 @@
-# Contributing to Copilot Hub
+# Contributing to Copilot CLI Mobile
 
 Thank you for your interest in contributing! This project is a self-hosted, multi-model AI chat platform powered by the GitHub Copilot SDK.
 

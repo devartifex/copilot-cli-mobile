@@ -1,6 +1,6 @@
-name: copilot-hub
+name: copilot-cli-mobile
 metadata:
-  template: copilot-hub@2.0.0
+  template: copilot-cli-mobile@2.0.0
 
 services:
   web:

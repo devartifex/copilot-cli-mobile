@@ -1,4 +1,4 @@
-# Copilot Hub
+# Copilot CLI Mobile
 
 > **Your AI chat, your server, all models.** Self-hosted multi-model AI chat powered by the official [GitHub Copilot SDK](https://github.com/github/copilot-sdk).
 
@@ -338,7 +338,7 @@ Create a service principal:
 
 ```bash
 az ad sp create-for-rbac \
-  --name "copilot-hub-cicd" \
+  --name "copilot-cli-mobile-cicd" \
   --role contributor \
   --scopes /subscriptions/<sub-id>/resourceGroups/<rg> \
   --sdk-auth

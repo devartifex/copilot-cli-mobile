@@ -448,6 +448,19 @@ export function setupWebSocket(
             try {
               await connectionEntry.session.abort();
               connectionEntry.isProcessing = false;
+
+              // Resolve any dangling input/permission promises to prevent leaks
+              if (connectionEntry.userInputResolve) {
+                const resolve = connectionEntry.userInputResolve;
+                connectionEntry.userInputResolve = null;
+                resolve({ answer: '', wasFreeform: false });
+              }
+              if (connectionEntry.permissionResolve) {
+                const resolve = connectionEntry.permissionResolve;
+                connectionEntry.permissionResolve = null;
+                resolve('deny');
+              }
+
               poolSend(connectionEntry, { type: 'aborted' });
             } catch (err: any) {
               console.error('Abort error:', err.message);

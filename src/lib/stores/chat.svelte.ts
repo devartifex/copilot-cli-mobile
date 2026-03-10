@@ -57,6 +57,7 @@ export interface ChatStore {
   clearMessages(): void;
   addUserMessage(content: string): void;
   clearPendingPermission(): void;
+  clearPendingUserInput(): void;
 }
 
 let nextId = 0;
@@ -260,11 +261,15 @@ export function createChatStore(wsStore: WsStore): ChatStore {
         addMessage('error', msg.message);
         isStreaming = false;
         currentStreamContent = '';
+        pendingUserInput = null;
+        pendingPermission = null;
         break;
 
       case 'aborted':
         isStreaming = false;
         currentStreamContent = '';
+        pendingUserInput = null;
+        pendingPermission = null;
         addInfoMessage('Response stopped');
         break;
 
@@ -452,6 +457,10 @@ export function createChatStore(wsStore: WsStore): ChatStore {
     pendingPermission = null;
   }
 
+  function clearPendingUserInput(): void {
+    pendingUserInput = null;
+  }
+
   // ── Return public interface ─────────────────────────────────────────────
 
   return {
@@ -486,5 +495,6 @@ export function createChatStore(wsStore: WsStore): ChatStore {
     clearMessages,
     addUserMessage,
     clearPendingPermission,
+    clearPendingUserInput,
   };
 }

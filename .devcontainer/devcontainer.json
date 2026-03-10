@@ -1,12 +1,12 @@
 {
-  "name": "Copilot Hub",
+  "name": "Copilot CLI Mobile",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
   "postCreateCommand": "npm install && npm install -g @github/copilot",
   "postStartCommand": "bash .devcontainer/startup.sh",
   "forwardPorts": [3000],
   "portsAttributes": {
     "3000": {
-      "label": "Copilot Hub",
+      "label": "Copilot CLI Mobile",
       "onAutoForward": "openBrowserOnce",
       "visibility": "public"
     }

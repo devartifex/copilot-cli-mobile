@@ -134,11 +134,11 @@
         <!-- Actions section -->
         <div class="sidebar-section">
           <button class="sidebar-action" onclick={onNewChat}>
-            <span class="sidebar-action-icon">＋</span>
+            <span class="sidebar-action-icon">+</span>
             New Chat
           </button>
           <button class="sidebar-action" onclick={onOpenSessions}>
-            <span class="sidebar-action-icon">☰</span>
+            <span class="sidebar-action-icon">↻</span>
             Sessions
           </button>
           <button class="sidebar-action" onclick={onOpenSettings}>

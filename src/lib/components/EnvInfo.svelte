@@ -34,15 +34,15 @@
 </script>
 
 <div class="env-lines">
-  <div class="env-line">{modelCount} models available</div>
+  <div class="env-line"><span class="dot green"></span> {modelCount} models available</div>
   {#if toolCount > 0}
-    <div class="env-line">{toolLine}</div>
+    <div class="env-line"><span class="dot cyan"></span> {toolLine}</div>
   {/if}
   {#if currentAgent}
-    <div class="env-line">agent: @{currentAgent}</div>
+    <div class="env-line"><span class="dot purple"></span> agent: @{currentAgent}</div>
   {/if}
   {#if sessionTitle}
-    <div class="env-line session-title-line">{sessionTitle}</div>
+    <div class="env-line session-title-line"><span class="dot blue"></span> {sessionTitle}</div>
   {/if}
   {#if contextDisplay}
     <div class="env-line">{contextDisplay}</div>
@@ -60,7 +60,22 @@
     color: var(--fg-dim);
     font-size: 0.82em;
     padding: 1px 0;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
   }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dot.green  { background: var(--green); }
+  .dot.cyan   { background: var(--cyan); }
+  .dot.purple { background: var(--purple); }
+  .dot.blue   { background: var(--blue); }
 
   .session-title-line {
     font-style: italic;

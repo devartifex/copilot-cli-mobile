@@ -398,17 +398,21 @@
   .kv-row,
   .param-row {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--sp-1);
     align-items: center;
   }
   .kv-key {
     flex: 1;
+    min-width: 80px;
   }
   .kv-value {
     flex: 2;
+    min-width: 100px;
   }
   .param-name {
     flex: 1;
+    min-width: 70px;
   }
   .param-type {
     flex: 0 0 auto;
@@ -416,6 +420,7 @@
   }
   .param-desc {
     flex: 2;
+    min-width: 100px;
   }
   .remove-btn {
     background: none;

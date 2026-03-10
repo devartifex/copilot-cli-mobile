@@ -163,10 +163,6 @@
 </script>
 
 {#if data.authenticated}
-  <!-- DEBUG: visible state overlay (remove after debugging) -->
-  <div class="debug-overlay">
-    auth=true | ws={wsStore.connectionState} | ready={wsStore.sessionReady} | model={chatStore.currentModel || 'none'} | msgs={chatStore.messages.length}
-  </div>
   <div class="screen">
     <div class="terminal">
       {#if showBanner}
@@ -278,20 +274,6 @@
 {/if}
 
 <style>
-  .debug-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 99999;
-    background: rgba(255, 0, 0, 0.85);
-    color: white;
-    font-size: 11px;
-    padding: 4px 8px;
-    font-family: monospace;
-    pointer-events: none;
-  }
-
   .screen {
     height: 100dvh;
     height: var(--vh, 100dvh);

@@ -10,12 +10,11 @@
   <div class="banner-box">
     <div class="banner-inner">
       <div class="banner-art">
-        <svg class="copilot-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2L2 12l10 10 10-10L12 2zm0 3.41L19.59 12 12 19.59 4.41 12 12 5.41z" />
-        </svg>
+        <img class="banner-logo" src="/img/logo.png" alt="" width="36" height="36" />
         <span class="banner-title">Copilot CLI Mobile</span>
       </div>
       <span class="banner-sub">Describe a task to get started</span>
+      <span class="banner-tip">Tip: Open the menu to switch modes</span>
     </div>
   </div>
 {/if}
@@ -46,11 +45,9 @@
     margin: 0 0 var(--sp-2) 0;
   }
 
-  .copilot-icon {
-    width: 36px;
-    height: 36px;
-    color: var(--purple);
+  .banner-logo {
     flex-shrink: 0;
+    filter: drop-shadow(0 0 10px rgba(210, 168, 255, 0.2));
   }
 
   .banner-title {
@@ -63,6 +60,12 @@
     color: var(--fg-muted);
     font-size: 0.88em;
     margin-top: var(--sp-1);
+  }
+
+  .banner-tip {
+    color: var(--fg-dim);
+    font-size: 0.78em;
+    margin-top: var(--sp-2);
   }
 
   @media (max-width: 599px) {

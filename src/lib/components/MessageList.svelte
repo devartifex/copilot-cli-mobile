@@ -75,7 +75,12 @@
 <div class="messages" bind:this={messagesEl}>
   {#if !hasMessages}
     <div class="empty-state">
-      <div class="empty-state-icon">◆ ◆ ◆</div>
+      <div class="empty-state-icon">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <path d="M24 4L4 24l20 20 20-20L24 4z" stroke="var(--purple)" stroke-width="1.5" fill="rgba(110,64,201,0.08)"/>
+          <path d="M24 12l-12 12 12 12 12-12-12-12z" stroke="var(--purple-dim)" stroke-width="1" fill="none" opacity="0.5"/>
+        </svg>
+      </div>
       <div class="empty-state-text">
         Start a conversation with GitHub Copilot
       </div>
@@ -150,9 +155,8 @@
   }
 
   .empty-state-icon {
-    font-size: 2em;
     color: var(--purple);
-    letter-spacing: 6px;
+    opacity: 0.7;
   }
 
   .empty-state-text {

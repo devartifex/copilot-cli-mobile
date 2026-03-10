@@ -223,7 +223,10 @@
       </div>
       <div class="status-right">
         {#if isStreaming}
-          <button class="action-btn stop-btn" onclick={onAbort}>■ Stop</button>
+          <button class="action-btn stop-btn" onclick={onAbort}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="1.5"/></svg>
+            Stop
+          </button>
         {/if}
         <input
           bind:this={fileInputEl}
@@ -240,9 +243,11 @@
           onclick={handleFileSelect}
           disabled={isDisabled || selectedFiles.length >= MAX_FILES}
           aria-label="Attach files"
-        >📎</button>
+        ><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 7.5l-5.8 5.8a3.2 3.2 0 0 1-4.5-4.5l5.8-5.8a2.1 2.1 0 0 1 3 3L6.2 11.8a1.1 1.1 0 0 1-1.5-1.5L10 5"/></svg></button>
         <span class="model-label">{currentModel}</span>
-        <button class="sidebar-toggle-btn" onclick={onToggleSidebar}>☰</button>
+        <button class="sidebar-toggle-btn" onclick={onToggleSidebar} aria-label="Open menu">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="5" x2="15" y2="5"/><line x1="3" y1="9" x2="15" y2="9"/><line x1="3" y1="13" x2="15" y2="13"/></svg>
+        </button>
       </div>
     </div>
   </div>
@@ -263,13 +268,15 @@
 
   .prompt-line {
     display: flex;
-    align-items: flex-start;
-    gap: 0;
+    align-items: center;
+    gap: var(--sp-1);
   }
 
   .prompt-line .term-prompt {
-    padding-top: 3px;
-    line-height: 1.5;
+    line-height: 1;
+    font-size: 1.1em;
+    font-weight: 700;
+    flex-shrink: 0;
     transition: color 0.2s ease;
   }
 
@@ -370,7 +377,7 @@
   .status-right {
     display: flex;
     align-items: center;
-    gap: var(--sp-1);
+    gap: var(--sp-2);
     flex-shrink: 0;
     margin-left: auto;
   }
@@ -389,13 +396,12 @@
     background: none;
     border: 1px solid var(--border);
     color: var(--fg-muted);
-    font-size: 1.1em;
-    padding: 4px 10px;
+    padding: 0;
     border-radius: var(--radius-sm);
     cursor: pointer;
     line-height: 1;
-    min-height: 36px;
-    min-width: 36px;
+    min-height: 32px;
+    min-width: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -443,8 +449,13 @@
 
   .attach-btn {
     font-size: 1em;
-    min-height: 26px;
-    padding: var(--sp-1) var(--sp-2);
+    min-height: 32px;
+    min-width: 32px;
+    padding: var(--sp-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
   }
 
   .attach-btn:disabled {

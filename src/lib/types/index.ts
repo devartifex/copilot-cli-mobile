@@ -39,6 +39,15 @@ export interface CustomToolDefinition {
 
 // ─── Tool / Agent types ─────────────────────────────────────────────────────
 
+export interface McpServerDefinition {
+  name: string;
+  url: string;
+  type: 'http' | 'sse';
+  headers: Record<string, string>;
+  tools: string[];
+  enabled: boolean;
+}
+
 export interface ToolInfo {
   name: string;
   namespacedName?: string;
@@ -421,7 +430,7 @@ export interface NewSessionMessage {
   customInstructions?: string;
   excludedTools?: string[];
   customTools?: CustomToolDefinition[];
-  githubMcpReadonly?: boolean;
+  mcpServers?: McpServerDefinition[];
 }
 
 export interface SendMessage {
@@ -628,7 +637,7 @@ export interface NewSessionConfig {
   customInstructions?: string;
   excludedTools?: string[];
   customTools?: CustomToolDefinition[];
-  githubMcpReadonly?: boolean;
+  mcpServers?: McpServerDefinition[];
 }
 
 // ─── Settings (persisted to localStorage) ───────────────────────────────────
@@ -640,5 +649,5 @@ export interface PersistedSettings {
   customInstructions: string;
   excludedTools: string[];
   customTools: CustomToolDefinition[];
-  githubMcpReadonly?: boolean;
+  mcpServers?: McpServerDefinition[];
 }

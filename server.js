@@ -23,6 +23,7 @@ const sessionMiddleware = session({
   resave: false,
   saveUninitialized: false,
   rolling: true,
+  proxy: !isDev,
   cookie: {
     httpOnly: true,
     secure: !isDev,

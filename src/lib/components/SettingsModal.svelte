@@ -5,6 +5,7 @@
     QuotaSnapshots,
     QuotaSnapshot,
     CustomToolDefinition,
+    McpServerDefinition,
   } from '$lib/types/index.js';
   import CustomToolsEditor from './CustomToolsEditor.svelte';
 
@@ -17,12 +18,12 @@
     customInstructions: string;
     excludedTools: string[];
     customTools: CustomToolDefinition[];
-    githubMcpReadonly: boolean;
+    mcpServers: McpServerDefinition[];
     onClose: () => void;
     onSaveInstructions: (instructions: string) => void;
     onToggleTool: (toolName: string, enabled: boolean) => void;
     onSaveCustomTools: (tools: CustomToolDefinition[]) => void;
-    onToggleGithubMcpReadonly: (value: boolean) => void;
+    onSaveMcpServers: (servers: McpServerDefinition[]) => void;
     onSelectAgent: (name: string) => void;
     onDeselectAgent: () => void;
     onCompact: () => void;
@@ -40,12 +41,12 @@
     customInstructions,
     excludedTools,
     customTools,
-    githubMcpReadonly,
+    mcpServers,
     onClose,
     onSaveInstructions,
     onToggleTool,
     onSaveCustomTools,
-    onToggleGithubMcpReadonly,
+    onSaveMcpServers,
     onSelectAgent,
     onDeselectAgent,
     onCompact,
@@ -58,6 +59,115 @@
 
   let activeSection = $state<AccordionSection>(null);
   let instructionsDraft = $state('');
+
+  // ── MCP server editor state ─────────────────────────────────────────
+  const MAX_MCP_SERVERS = 10;
+  let mcpShowAddForm = $state(false);
+  let mcpExpandedIndex = $state<number | null>(null);
+  let mcpDeleteConfirmIndex = $state<number | null>(null);
+  let mcpDraftName = $state('');
+  let mcpDraftUrl = $state('');
+  let mcpDraftType = $state<'http' | 'sse'>('http');
+  let mcpDraftHeaders = $state<Array<{ key: string; value: string }>>([]);
+  let mcpDraftTools = $state('');
+  let mcpDraftEnabled = $state(true);
+  let mcpFormError = $state('');
+
+  const canAddMoreMcp = $derived(mcpServers.length < MAX_MCP_SERVERS);
+
+  function mcpResetDraft(): void {
+    mcpDraftName = '';
+    mcpDraftUrl = '';
+    mcpDraftType = 'http';
+    mcpDraftHeaders = [];
+    mcpDraftTools = '';
+    mcpDraftEnabled = true;
+    mcpFormError = '';
+  }
+
+  function mcpLoadIntoDraft(server: McpServerDefinition): void {
+    mcpDraftName = server.name;
+    mcpDraftUrl = server.url;
+    mcpDraftType = server.type;
+    mcpDraftHeaders = Object.entries(server.headers).map(([key, value]) => ({ key, value }));
+    mcpDraftTools = server.tools.length > 0 ? server.tools.join(', ') : '';
+    mcpDraftEnabled = server.enabled;
+    mcpFormError = '';
+  }
+
+  function mcpValidateUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
+  function mcpValidateDraft(): string | null {
+    if (!mcpDraftName.trim()) return 'Name is required';
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(mcpDraftName.trim())) return 'Name must be alphanumeric/underscore/dash, max 64 chars';
+    if (!mcpDraftUrl.trim()) return 'URL is required';
+    if (!mcpValidateUrl(mcpDraftUrl)) return 'URL must be https://';
+    return null;
+  }
+
+  function mcpBuildFromDraft(): McpServerDefinition {
+    const headers: Record<string, string> = {};
+    for (const h of mcpDraftHeaders) {
+      if (h.key.trim()) headers[h.key.trim()] = h.value;
+    }
+    const tools = mcpDraftTools.trim()
+      ? mcpDraftTools.split(',').map(t => t.trim()).filter(Boolean)
+      : [];
+    return {
+      name: mcpDraftName.trim(),
+      url: mcpDraftUrl.trim(),
+      type: mcpDraftType,
+      headers,
+      tools,
+      enabled: mcpDraftEnabled,
+    };
+  }
+
+  function mcpHandleAdd(): void {
+    const err = mcpValidateDraft();
+    if (err) { mcpFormError = err; return; }
+    const server = mcpBuildFromDraft();
+    if (mcpServers.some(s => s.name === server.name)) {
+      mcpFormError = 'A server with this name already exists';
+      return;
+    }
+    onSaveMcpServers([...mcpServers, server]);
+    mcpResetDraft();
+    mcpShowAddForm = false;
+  }
+
+  function mcpHandleUpdate(index: number): void {
+    const err = mcpValidateDraft();
+    if (err) { mcpFormError = err; return; }
+    const server = mcpBuildFromDraft();
+    const existing = mcpServers.findIndex((s, i) => s.name === server.name && i !== index);
+    if (existing >= 0) { mcpFormError = 'A server with this name already exists'; return; }
+    const updated = [...mcpServers];
+    updated[index] = server;
+    onSaveMcpServers(updated);
+    mcpExpandedIndex = null;
+    mcpResetDraft();
+  }
+
+  function mcpHandleDelete(index: number): void {
+    const updated = mcpServers.filter((_, i) => i !== index);
+    onSaveMcpServers(updated);
+    mcpDeleteConfirmIndex = null;
+    mcpExpandedIndex = null;
+  }
+
+  function mcpToggleEnabled(index: number): void {
+    const updated = [...mcpServers];
+    updated[index] = { ...updated[index], enabled: !updated[index].enabled };
+    onSaveMcpServers(updated);
+  }
 
   // Sync draft when prop changes (including initial value)
   $effect(() => {
@@ -243,24 +353,110 @@
           </button>
           {#if activeSection === 'mcp'}
             <div class="settings-accordion-body">
+              <!-- Built-in GitHub server (non-removable) -->
               <div class="mcp-server-item">
                 <div class="mcp-server-header">
                   <span class="mcp-server-name">GitHub</span>
-                  <span class="mcp-server-url">api.githubcopilot.com</span>
+                  <span class="mcp-server-badge">built-in</span>
                 </div>
-                <div class="mcp-server-option">
-                  <label class="tool-toggle-label">
-                    <input
-                      type="checkbox"
-                      class="tool-toggle-check"
-                      checked={!githubMcpReadonly}
-                      onchange={(e: Event) => onToggleGithubMcpReadonly(!(e.target as HTMLInputElement).checked)}
-                    />
-                    <span class="tool-toggle-name">Write access</span>
-                  </label>
-                  <div class="tool-toggle-desc">Create repos, open issues, push files, manage PRs, etc.</div>
-                </div>
+                <div class="tool-toggle-desc">api.githubcopilot.com — always active with full access</div>
               </div>
+
+              <!-- User-defined servers -->
+              {#each mcpServers as server, i (server.name)}
+                <div class="mcp-server-item">
+                  <div class="mcp-server-header">
+                    <label class="tool-toggle-label" style="flex:1">
+                      <input
+                        type="checkbox"
+                        class="tool-toggle-check"
+                        checked={server.enabled}
+                        onchange={() => mcpToggleEnabled(i)}
+                      />
+                      <span class="mcp-server-name">{server.name}</span>
+                    </label>
+                    <span class="mcp-server-badge">{server.type}</span>
+                    <button class="mcp-edit-btn" onclick={() => {
+                      if (mcpExpandedIndex === i) {
+                        mcpExpandedIndex = null;
+                      } else {
+                        mcpLoadIntoDraft(server);
+                        mcpExpandedIndex = i;
+                        mcpShowAddForm = false;
+                      }
+                    }}>✎</button>
+                  </div>
+                  <div class="tool-toggle-desc">{server.url}</div>
+
+                  {#if mcpExpandedIndex === i}
+                    <div class="mcp-form">
+                      {#if mcpFormError}
+                        <div class="mcp-form-error">{mcpFormError}</div>
+                      {/if}
+                      <input class="mcp-input" bind:value={mcpDraftName} placeholder="Name" />
+                      <input class="mcp-input" bind:value={mcpDraftUrl} placeholder="https://..." />
+                      <select class="mcp-input" bind:value={mcpDraftType}>
+                        <option value="http">HTTP (Streamable)</option>
+                        <option value="sse">SSE</option>
+                      </select>
+                      <input class="mcp-input" bind:value={mcpDraftTools} placeholder="Tools filter (comma-separated, empty = all)" />
+
+                      <div class="mcp-headers-label">Headers</div>
+                      {#each mcpDraftHeaders as header, hi (hi)}
+                        <div class="mcp-header-row">
+                          <input class="mcp-input mcp-input-half" bind:value={header.key} placeholder="Key" />
+                          <input class="mcp-input mcp-input-half" bind:value={header.value} placeholder="Value" />
+                          <button class="mcp-remove-btn" onclick={() => { mcpDraftHeaders = mcpDraftHeaders.filter((_, idx) => idx !== hi); }}>✕</button>
+                        </div>
+                      {/each}
+                      <button class="mcp-link-btn" onclick={() => { mcpDraftHeaders = [...mcpDraftHeaders, { key: '', value: '' }]; }}>+ Add header</button>
+
+                      <div class="mcp-form-actions">
+                        <button class="action-btn save" onclick={() => mcpHandleUpdate(i)}>Save</button>
+                        {#if mcpDeleteConfirmIndex === i}
+                          <button class="action-btn delete" onclick={() => mcpHandleDelete(i)}>Confirm delete</button>
+                        {:else}
+                          <button class="action-btn delete" onclick={() => { mcpDeleteConfirmIndex = i; }}>Delete</button>
+                        {/if}
+                        <button class="action-btn" onclick={() => { mcpExpandedIndex = null; mcpResetDraft(); }}>Cancel</button>
+                      </div>
+                    </div>
+                  {/if}
+                </div>
+              {/each}
+
+              <!-- Add new server form -->
+              {#if mcpShowAddForm}
+                <div class="mcp-form">
+                  {#if mcpFormError}
+                    <div class="mcp-form-error">{mcpFormError}</div>
+                  {/if}
+                  <input class="mcp-input" bind:value={mcpDraftName} placeholder="Name (e.g. my-server)" />
+                  <input class="mcp-input" bind:value={mcpDraftUrl} placeholder="https://..." />
+                  <select class="mcp-input" bind:value={mcpDraftType}>
+                    <option value="http">HTTP (Streamable)</option>
+                    <option value="sse">SSE</option>
+                  </select>
+                  <input class="mcp-input" bind:value={mcpDraftTools} placeholder="Tools filter (comma-separated, empty = all)" />
+
+                  <div class="mcp-headers-label">Headers</div>
+                  {#each mcpDraftHeaders as header, hi (hi)}
+                    <div class="mcp-header-row">
+                      <input class="mcp-input mcp-input-half" bind:value={header.key} placeholder="Key" />
+                      <input class="mcp-input mcp-input-half" bind:value={header.value} placeholder="Value" />
+                      <button class="mcp-remove-btn" onclick={() => { mcpDraftHeaders = mcpDraftHeaders.filter((_, idx) => idx !== hi); }}>✕</button>
+                    </div>
+                  {/each}
+                  <button class="mcp-link-btn" onclick={() => { mcpDraftHeaders = [...mcpDraftHeaders, { key: '', value: '' }]; }}>+ Add header</button>
+
+                  <div class="mcp-form-actions">
+                    <button class="action-btn save" onclick={mcpHandleAdd}>Add Server</button>
+                    <button class="action-btn" onclick={() => { mcpShowAddForm = false; mcpResetDraft(); }}>Cancel</button>
+                  </div>
+                </div>
+              {:else if canAddMoreMcp}
+                <button class="mcp-link-btn" style="margin-top: var(--sp-2)" onclick={() => { mcpResetDraft(); mcpShowAddForm = true; mcpExpandedIndex = null; }}>+ Add MCP server</button>
+              {/if}
             </div>
           {/if}
         </div>
@@ -531,25 +727,106 @@
     margin-top: 1px;
   }
   .mcp-server-item {
-    padding: var(--sp-1) 0;
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+  }
+  .mcp-server-item:last-child {
+    border-bottom: none;
   }
   .mcp-server-header {
     display: flex;
     align-items: center;
     gap: var(--sp-2);
-    margin-bottom: var(--sp-2);
   }
   .mcp-server-name {
     font-size: 0.85em;
     font-weight: 600;
     color: var(--purple);
   }
-  .mcp-server-url {
+  .mcp-server-badge {
+    font-size: 0.65em;
+    color: var(--fg-dim);
+    background: var(--bg-overlay);
+    padding: 1px 6px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .mcp-edit-btn {
+    background: none;
+    border: none;
+    color: var(--fg-dim);
+    cursor: pointer;
+    font-size: 0.85em;
+    padding: 2px 6px;
+  }
+  .mcp-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+    padding: var(--sp-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+  }
+  .mcp-form-error {
+    font-size: 0.75em;
+    color: var(--red);
+  }
+  .mcp-input {
+    width: 100%;
+    background: var(--bg-overlay);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-1) var(--sp-2);
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    outline: none;
+  }
+  .mcp-input:focus {
+    border-color: var(--purple);
+  }
+  .mcp-input-half {
+    width: calc(50% - var(--sp-1));
+  }
+  .mcp-headers-label {
     font-size: 0.72em;
     color: var(--fg-dim);
+    margin-top: var(--sp-1);
   }
-  .mcp-server-option {
-    padding-left: var(--sp-1);
+  .mcp-header-row {
+    display: flex;
+    gap: var(--sp-1);
+    align-items: center;
+  }
+  .mcp-remove-btn {
+    background: none;
+    border: none;
+    color: var(--fg-dim);
+    cursor: pointer;
+    font-size: 0.8em;
+    padding: 2px;
+    flex-shrink: 0;
+  }
+  .mcp-link-btn {
+    background: none;
+    border: none;
+    color: var(--purple);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.78em;
+    padding: var(--sp-1) 0;
+    text-align: left;
+  }
+  .mcp-form-actions {
+    display: flex;
+    gap: var(--sp-2);
+    margin-top: var(--sp-1);
+  }
+  .action-btn.delete {
+    color: var(--red);
+    border-color: var(--red);
   }
 
   /* Agents */

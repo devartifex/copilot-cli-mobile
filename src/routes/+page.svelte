@@ -97,7 +97,7 @@
       ...(settings.customInstructions.trim() && { customInstructions: settings.customInstructions.trim() }),
       ...(settings.excludedTools.length > 0 && { excludedTools: settings.excludedTools }),
       ...(settings.customTools.length > 0 && { customTools: settings.customTools }),
-      ...(settings.githubMcpReadonly && { githubMcpReadonly: true }),
+      ...(settings.mcpServers.length > 0 && { mcpServers: settings.mcpServers.filter(s => s.enabled) }),
     });
   }
 
@@ -255,7 +255,7 @@
       customInstructions={settings.customInstructions}
       excludedTools={settings.excludedTools}
       customTools={settings.customTools}
-      githubMcpReadonly={settings.githubMcpReadonly}
+      mcpServers={settings.mcpServers}
       onClose={() => settingsOpen = false}
       onSaveInstructions={(v) => { settings.customInstructions = v; }}
       onToggleTool={(name, enabled) => {
@@ -266,7 +266,7 @@
         }
       }}
       onSaveCustomTools={(tools) => { settings.customTools = tools; }}
-      onToggleGithubMcpReadonly={(v) => { settings.githubMcpReadonly = v; }}
+      onSaveMcpServers={(servers) => { settings.mcpServers = servers; }}
       onSelectAgent={(name) => wsStore.selectAgent(name)}
       onDeselectAgent={() => wsStore.deselectAgent()}
       onCompact={() => wsStore.compact()}

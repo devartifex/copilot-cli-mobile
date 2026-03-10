@@ -3,6 +3,7 @@ import type {
   ReasoningEffort,
   PersistedSettings,
   CustomToolDefinition,
+  McpServerDefinition,
 } from '$lib/types/index.js';
 
 const STORAGE_KEY = 'copilot-cli-settings';
@@ -14,7 +15,7 @@ const DEFAULT_SETTINGS: PersistedSettings = {
   customInstructions: '',
   excludedTools: [],
   customTools: [],
-  githubMcpReadonly: false,
+  mcpServers: [],
 };
 
 const VALID_MODES = new Set<SessionMode>(['interactive', 'plan', 'autopilot']);
@@ -33,6 +34,19 @@ function isValidCustomTool(t: unknown): t is CustomToolDefinition {
   );
 }
 
+function isValidMcpServer(s: unknown): s is McpServerDefinition {
+  if (!s || typeof s !== 'object') return false;
+  const obj = s as Record<string, unknown>;
+  return (
+    typeof obj.name === 'string' &&
+    typeof obj.url === 'string' &&
+    (obj.type === 'http' || obj.type === 'sse') &&
+    typeof obj.headers === 'object' && obj.headers !== null &&
+    Array.isArray(obj.tools) &&
+    typeof obj.enabled === 'boolean'
+  );
+}
+
 export interface SettingsStore {
   customInstructions: string;
   excludedTools: string[];
@@ -40,7 +54,7 @@ export interface SettingsStore {
   reasoningEffort: ReasoningEffort;
   selectedModel: string;
   selectedMode: SessionMode;
-  githubMcpReadonly: boolean;
+  mcpServers: McpServerDefinition[];
   load(): void;
   save(): void;
 }
@@ -52,7 +66,7 @@ export function createSettingsStore(): SettingsStore {
   let reasoningEffort = $state<ReasoningEffort>(DEFAULT_SETTINGS.reasoningEffort);
   let selectedModel = $state(DEFAULT_SETTINGS.model);
   let selectedMode = $state<SessionMode>(DEFAULT_SETTINGS.mode);
-  let githubMcpReadonly = $state(DEFAULT_SETTINGS.githubMcpReadonly ?? false);
+  let mcpServers = $state<McpServerDefinition[]>([...(DEFAULT_SETTINGS.mcpServers ?? [])]);
 
   function load(): void {
     if (typeof localStorage === 'undefined') return;
@@ -79,8 +93,8 @@ export function createSettingsStore(): SettingsStore {
       if (Array.isArray(parsed.customTools)) {
         customTools = parsed.customTools.filter(isValidCustomTool).slice(0, 10);
       }
-      if (typeof parsed.githubMcpReadonly === 'boolean') {
-        githubMcpReadonly = parsed.githubMcpReadonly;
+      if (Array.isArray(parsed.mcpServers)) {
+        mcpServers = parsed.mcpServers.filter(isValidMcpServer).slice(0, 10);
       }
     } catch {
       // Ignore corrupt data
@@ -97,7 +111,7 @@ export function createSettingsStore(): SettingsStore {
         customInstructions,
         excludedTools,
         customTools,
-        githubMcpReadonly,
+        mcpServers,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
@@ -124,8 +138,8 @@ export function createSettingsStore(): SettingsStore {
     get selectedMode() { return selectedMode; },
     set selectedMode(v: SessionMode) { selectedMode = v; save(); },
 
-    get githubMcpReadonly() { return githubMcpReadonly; },
-    set githubMcpReadonly(v: boolean) { githubMcpReadonly = v; save(); },
+    get mcpServers() { return mcpServers; },
+    set mcpServers(v: McpServerDefinition[]) { mcpServers = v.slice(0, 10); save(); },
 
     load,
     save,

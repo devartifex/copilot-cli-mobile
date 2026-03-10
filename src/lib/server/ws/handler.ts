@@ -348,7 +348,31 @@ export function setupWebSocket(
 
               const customTools = Array.isArray(msg.customTools) ? msg.customTools.slice(0, 10) : undefined;
 
-              const githubMcpReadonly = msg.githubMcpReadonly === true;
+              const mcpServers = Array.isArray(msg.mcpServers)
+                ? msg.mcpServers
+                    .filter((s: unknown) => {
+                      if (!s || typeof s !== 'object') return false;
+                      const obj = s as Record<string, unknown>;
+                      return (
+                        typeof obj.name === 'string' &&
+                        typeof obj.url === 'string' &&
+                        (obj.type === 'http' || obj.type === 'sse') &&
+                        typeof obj.headers === 'object' && obj.headers !== null &&
+                        Array.isArray(obj.tools)
+                      );
+                    })
+                    .slice(0, 10)
+                    .map((s: unknown) => {
+                      const obj = s as Record<string, unknown>;
+                      return {
+                        name: obj.name as string,
+                        url: obj.url as string,
+                        type: obj.type as 'http' | 'sse',
+                        headers: obj.headers as Record<string, string>,
+                        tools: (obj.tools as unknown[]).filter((t): t is string => typeof t === 'string'),
+                      };
+                    })
+                : undefined;
 
               connectionEntry.session = await createCopilotSession(connectionEntry.client, githubToken, {
                 model: msg.model,
@@ -360,7 +384,7 @@ export function setupWebSocket(
                 onUserInputRequest: makeUserInputHandler(connectionEntry),
                 permissionMode,
                 onPermissionRequest: makePermissionHandler(connectionEntry),
-                githubMcpReadonly,
+                mcpServers,
               });
 
               wireSessionEvents(connectionEntry.session, connectionEntry);

@@ -19,6 +19,14 @@ export interface InfiniteSessionsConfig {
   bufferExhaustionThreshold?: number;
 }
 
+export interface McpServerInput {
+  name: string;
+  url: string;
+  type: 'http' | 'sse';
+  headers: Record<string, string>;
+  tools: string[];
+}
+
 export interface CreateSessionOptions {
   model?: string;
   reasoningEffort?: ReasoningEffort;
@@ -30,7 +38,7 @@ export interface CreateSessionOptions {
   onUserInputRequest?: SessionConfig['onUserInputRequest'];
   permissionMode?: 'approve_all' | 'prompt';
   onPermissionRequest?: SessionConfig['onPermissionRequest'];
-  githubMcpReadonly?: boolean;
+  mcpServers?: McpServerInput[];
 }
 
 const BLOCKED_RANGES = ['10.', '172.16.', '172.17.', '172.18.', '172.19.',
@@ -61,6 +69,31 @@ function validateToolUrl(toolName: string, webhookUrl: string): void {
   if (BLOCKED_RANGES.some((r) => url.hostname.startsWith(r))) {
     throw new Error(`Tool "${toolName}": internal network URLs are not allowed`);
   }
+}
+
+function validateMcpServerUrl(name: string, serverUrl: string): void {
+  const url = new URL(serverUrl);
+  if (url.protocol !== 'https:') {
+    throw new Error(`MCP server "${name}": HTTPS required`);
+  }
+  if (BLOCKED_RANGES.some((r) => url.hostname.startsWith(r))) {
+    throw new Error(`MCP server "${name}": internal network URLs are not allowed`);
+  }
+}
+
+function buildUserMcpServers(servers?: McpServerInput[]): Record<string, unknown> {
+  if (!servers || servers.length === 0) return {};
+  const result: Record<string, unknown> = {};
+  for (const server of servers) {
+    validateMcpServerUrl(server.name, server.url);
+    result[server.name] = {
+      type: server.type,
+      url: server.url,
+      headers: server.headers,
+      tools: server.tools.length > 0 ? server.tools : ['*'],
+    };
+  }
+  return result;
 }
 
 function buildCustomTools(customTools: CustomToolDefinition[]) {
@@ -99,14 +132,13 @@ export async function createCopilotSession(
     mcpServers: {
       github: {
         type: 'http',
-        url: options.githubMcpReadonly
-          ? 'https://api.githubcopilot.com/mcp/x/all/readonly'
-          : 'https://api.githubcopilot.com/mcp/x/all',
+        url: 'https://api.githubcopilot.com/mcp/x/all',
         headers: {
           Authorization: `Bearer ${githubToken}`,
         },
         tools: ['*'],
       },
+      ...buildUserMcpServers(options.mcpServers),
     },
   };
 

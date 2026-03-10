@@ -200,7 +200,7 @@ export function createWsStore(): WsStore {
       ...(config.customInstructions?.trim() && { customInstructions: config.customInstructions.trim() }),
       ...(config.excludedTools?.length && { excludedTools: config.excludedTools }),
       ...(config.customTools?.length && { customTools: config.customTools }),
-      ...(config.githubMcpReadonly && { githubMcpReadonly: true }),
+      ...(config.mcpServers?.length && { mcpServers: config.mcpServers }),
     };
     send(msg);
   }

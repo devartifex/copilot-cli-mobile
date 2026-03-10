@@ -59,10 +59,10 @@
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="sessions-overlay" onclick={handleBackdropClick}>
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="sessions-sheet" onclick={(e: MouseEvent) => e.stopPropagation()}>
+  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+  <div class="sessions-overlay" role="presentation" onclick={handleBackdropClick}>
+    <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+    <div class="sessions-sheet" role="presentation" onclick={(e: MouseEvent) => e.stopPropagation()}>
       <div class="sessions-header">
         <span class="sessions-title">Sessions</span>
         <button class="sessions-close" onclick={onClose}>✕</button>
@@ -73,8 +73,8 @@
           <p class="sessions-empty">No previous sessions found.</p>
         {:else}
           {#each sessions as session (session.id)}
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="session-item" onclick={() => handleResume(session.id)}>
+            <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+            <div class="session-item" role="button" tabindex="0" onclick={() => handleResume(session.id)} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') handleResume(session.id); }}>
               <div class="session-item-row">
                 <div class="session-item-info">
                   <div class="session-item-title">

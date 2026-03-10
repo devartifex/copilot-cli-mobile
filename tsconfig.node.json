@@ -5,16 +5,14 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": "src/lib/server",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["src/index.ts", "src/server.ts", "src/config.ts", "src/auth/**/*", "src/copilot/**/*", "src/routes/**/*", "src/ws/**/*", "src/types/**/*", "src/security-log.ts"],
-  "exclude": ["src/lib/**/*", "src/routes/**/+*", "src/hooks*", "src/app.*"]
+  "include": ["src/lib/server/**/*"],
+  "exclude": ["node_modules"]
 }

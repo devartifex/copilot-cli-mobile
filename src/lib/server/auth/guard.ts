@@ -1,5 +1,5 @@
-import { config } from '$lib/server/config';
-import { logSecurity } from '$lib/server/security-log';
+import { config } from '../config.js';
+import { logSecurity } from '../security-log.js';
 
 export interface SessionData {
   githubToken?: string;

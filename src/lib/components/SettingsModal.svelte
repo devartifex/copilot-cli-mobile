@@ -148,10 +148,10 @@
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="settings-overlay" onclick={handleBackdropClick}>
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="settings-panel" onclick={(e: MouseEvent) => e.stopPropagation()}>
+  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+  <div class="settings-overlay" role="presentation" onclick={handleBackdropClick}>
+    <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+    <div class="settings-panel" role="presentation" onclick={(e: MouseEvent) => e.stopPropagation()}>
       <div class="settings-header">
         <span class="settings-title">Settings</span>
         <button class="settings-close" onclick={onClose}>✕</button>
@@ -244,11 +244,14 @@
               {:else}
                 {#each agents as agent (getAgentName(agent))}
                   {@const name = getAgentName(agent)}
-                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
                   <div
                     class="agent-item"
                     class:active={currentAgent === name}
+                    role="button"
+                    tabindex="0"
                     onclick={() => handleAgentClick(name)}
+                    onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') handleAgentClick(name); }}
                   >
                     <span class="agent-name">{name}</span>
                     {#if getAgentDescription(agent)}

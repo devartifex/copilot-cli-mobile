@@ -1,31 +1,14 @@
 import { createServer } from 'http';
 import { handler } from './build/handler.js';
-import { WebSocketServer } from 'ws';
-import { parse } from 'cookie';
 import session from 'express-session';
 import FileStoreFactory from 'session-file-store';
-
-// Session bridge — shared with SvelteKit via globalThis
-const SESSION_MAP_KEY = '__copilotSessionMap';
-const SESSION_COUNTER_KEY = '__copilotSessionCounter';
-if (!globalThis[SESSION_MAP_KEY]) globalThis[SESSION_MAP_KEY] = new Map();
-
-function registerSession(sess) {
-  globalThis[SESSION_COUNTER_KEY] = (globalThis[SESSION_COUNTER_KEY] || 0) + 1;
-  const id = String(globalThis[SESSION_COUNTER_KEY]);
-  globalThis[SESSION_MAP_KEY].set(id, sess);
-  return id;
-}
-
-function deleteSessionById(id) {
-  globalThis[SESSION_MAP_KEY].delete(id);
-}
+import { setupWebSocket } from './dist/ws/handler.js';
+import { registerSession, deleteSessionById } from './dist/session-store.js';
 
 const FileStore = FileStoreFactory(session);
 const isDev = process.env.NODE_ENV !== 'production';
 const port = parseInt(process.env.PORT || '3000');
 
-// Session middleware — shared between HTTP and WebSocket
 const sessionMiddleware = session({
   store: isDev
     ? new FileStore({ path: process.env.SESSION_STORE_PATH || '.sessions', ttl: 86400, retries: 0, logFn: () => {} })
@@ -43,12 +26,10 @@ const sessionMiddleware = session({
 });
 
 const server = createServer((req, res) => {
-  // Apply session middleware then delegate to SvelteKit handler
   sessionMiddleware(req, res, () => {
     const sessionId = registerSession(req.session);
     req.headers['x-session-id'] = sessionId;
 
-    // Wrap res.end to clean up the session mapping after the response completes
     const origEnd = res.end.bind(res);
     res.end = function (...args) {
       deleteSessionById(sessionId);
@@ -59,41 +40,19 @@ const server = createServer((req, res) => {
   });
 });
 
-// WebSocket server on same HTTP server
-const wss = new WebSocketServer({ server, path: '/ws' });
-
-// Import WS handler dynamically (will be set up in Phase 3)
-// For now, just accept connections and log
-wss.on('connection', (ws, req) => {
-  // Session will be parsed from cookies in the WS handler
-  sessionMiddleware(req, {}, () => {
-    ws.send(JSON.stringify({ type: 'connected', message: 'SvelteKit WebSocket server' }));
-  });
-
-  ws.on('message', (data) => {
-    // Placeholder — full handler imported in Phase 3/backend migration
-    console.log('WS message received:', data.toString().slice(0, 100));
-  });
-
-  ws.on('close', () => {
-    console.log('WS client disconnected');
-  });
-});
+setupWebSocket(server, sessionMiddleware);
 
 server.listen(port, () => {
   console.log('');
-  console.log('  Copilot CLI Mobile (SvelteKit)');
-  console.log('  ──────────────────────────────');
+  console.log('  Copilot CLI Mobile');
+  console.log('  ──────────────────');
   console.log(`  Mode:  ${isDev ? 'Development' : 'Production'}`);
   console.log(`  URL:   http://localhost:${port}`);
-  console.log(`  Port:  ${port}`);
   console.log('');
 });
 
-// Graceful shutdown
 function shutdown() {
   console.log('\nShutting down...');
-  wss.clients.forEach((ws) => ws.close());
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 5000);
 }

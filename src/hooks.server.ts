@@ -16,26 +16,29 @@ const sessionHandle: Handle = async ({ event, resolve }) => {
 const securityHeaders: Handle = async ({ event, resolve }) => {
   const response = await resolve(event);
 
-  // CSP
-  response.headers.set('Content-Security-Policy', [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline'",
-    "connect-src 'self' ws: wss:",
-    "img-src 'self' data: https://avatars.githubusercontent.com",
-    "font-src 'self'",
-    "frame-ancestors 'none'",
-  ].join('; '));
+  const isDev = process.env.NODE_ENV !== 'production';
 
-  // Security headers
+  // Skip strict CSP in dev mode — Vite HMR uses blob: workers and eval
+  if (!isDev) {
+    response.headers.set('Content-Security-Policy', [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "connect-src 'self' ws: wss:",
+      "worker-src 'self' blob:",
+      "img-src 'self' data: https://avatars.githubusercontent.com",
+      "font-src 'self'",
+      "frame-ancestors 'none'",
+    ].join('; '));
+
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  // Security headers (always)
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('X-XSS-Protection', '1; mode=block');
-
-  if (process.env.NODE_ENV === 'production') {
-    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
 
   return response;
 };

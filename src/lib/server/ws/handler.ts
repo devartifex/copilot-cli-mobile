@@ -1,14 +1,14 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server, IncomingMessage } from 'http';
-import { createCopilotClient } from '$lib/server/copilot/client';
-import { createCopilotSession, getAvailableModels } from '$lib/server/copilot/session';
-import { config } from '$lib/server/config';
-import { logSecurity } from '$lib/server/security-log';
-import { validateGitHubToken } from '$lib/server/auth/github';
+import { createCopilotClient } from '../copilot/client.js';
+import { createCopilotSession, getAvailableModels } from '../copilot/session.js';
+import { config } from '../config.js';
+import { logSecurity } from '../security-log.js';
+import { validateGitHubToken } from '../auth/github.js';
 import {
   sessionPool, createPoolEntry, destroyPoolEntry, poolSend,
   type PoolEntry,
-} from '$lib/server/ws/session-pool';
+} from './session-pool.js';
 
 type SessionMiddleware = (req: any, res: any, next: () => void) => void;
 
@@ -147,20 +147,24 @@ function makePermissionHandler(entry: PoolEntry) {
 
     // Check remembered preferences
     const remembered = entry.permissionPreferences.get(toolName);
-    if (remembered === 'allow') return Promise.resolve(true);
-    if (remembered === 'deny') return Promise.resolve(false);
+    if (remembered === 'allow') return Promise.resolve({ kind: 'approved' as const });
+    if (remembered === 'deny') return Promise.resolve({ kind: 'denied-interactively-by-user' as const });
 
     const requestId = `perm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    return new Promise<boolean>((resolve) => {
+    return new Promise<{ kind: 'approved' } | { kind: 'denied-interactively-by-user'; feedback?: string }>((resolve) => {
       const timeout = setTimeout(() => {
         entry.permissionResolve = null;
-        resolve(false);
+        resolve({ kind: 'denied-interactively-by-user', feedback: 'Permission request timed out' });
       }, PERMISSION_TIMEOUT_MS);
 
       entry.permissionResolve = (decision: string) => {
         clearTimeout(timeout);
-        resolve(decision === 'allow');
+        resolve(
+          decision === 'allow'
+            ? { kind: 'approved' }
+            : { kind: 'denied-interactively-by-user', feedback: 'User denied' },
+        );
       };
 
       poolSend(entry, {

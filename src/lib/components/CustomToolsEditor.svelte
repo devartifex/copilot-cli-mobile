@@ -178,8 +178,8 @@
 <div class="custom-tools">
   {#each tools as tool, index (tool.name)}
     <div class="custom-tool-item">
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="custom-tool-header" onclick={() => handleExpandTool(index)}>
+      <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+      <div class="custom-tool-header" role="button" tabindex="0" onclick={() => handleExpandTool(index)} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') handleExpandTool(index); }}>
         <div>
           <div class="custom-tool-name">{tool.name}</div>
           <div class="custom-tool-url">{tool.method} {tool.webhookUrl}</div>
@@ -189,22 +189,22 @@
 
       {#if expandedIndex === index}
         <div class="custom-tool-form">
-          <label class="custom-tool-label">Name</label>
+          <span class="custom-tool-label">Name</span>
           <input class="custom-tool-input" bind:value={draftName} placeholder="my_tool" maxlength="64" />
 
-          <label class="custom-tool-label">Description</label>
+          <span class="custom-tool-label">Description</span>
           <input class="custom-tool-input" bind:value={draftDescription} placeholder="What this tool does" />
 
-          <label class="custom-tool-label">Method</label>
+          <span class="custom-tool-label">Method</span>
           <select class="custom-tool-input" bind:value={draftMethod}>
             <option value="GET">GET</option>
             <option value="POST">POST</option>
           </select>
 
-          <label class="custom-tool-label">Webhook URL</label>
+          <span class="custom-tool-label">Webhook URL</span>
           <input class="custom-tool-input" bind:value={draftUrl} placeholder="https://example.com/api" />
 
-          <label class="custom-tool-label">Headers</label>
+          <span class="custom-tool-label">Headers</span>
           {#each draftHeaders as header, hi (hi)}
             <div class="kv-row">
               <input class="custom-tool-input kv-key" bind:value={header.key} placeholder="Key" />
@@ -214,7 +214,7 @@
           {/each}
           <button class="add-kv-btn" onclick={handleAddHeader}>+ Header</button>
 
-          <label class="custom-tool-label">Parameters</label>
+          <span class="custom-tool-label">Parameters</span>
           {#each draftParams as param, pi (pi)}
             <div class="param-row">
               <input class="custom-tool-input param-name" bind:value={param.name} placeholder="Name" />
@@ -250,22 +250,22 @@
   {#if showAddForm}
     <div class="custom-tool-item">
       <div class="custom-tool-form" style="border-top: none;">
-        <label class="custom-tool-label">Name</label>
+        <span class="custom-tool-label">Name</span>
         <input class="custom-tool-input" bind:value={draftName} placeholder="my_tool" maxlength="64" />
 
-        <label class="custom-tool-label">Description</label>
+        <span class="custom-tool-label">Description</span>
         <input class="custom-tool-input" bind:value={draftDescription} placeholder="What this tool does" />
 
-        <label class="custom-tool-label">Method</label>
+        <span class="custom-tool-label">Method</span>
         <select class="custom-tool-input" bind:value={draftMethod}>
           <option value="GET">GET</option>
           <option value="POST">POST</option>
         </select>
 
-        <label class="custom-tool-label">Webhook URL</label>
+        <span class="custom-tool-label">Webhook URL</span>
         <input class="custom-tool-input" bind:value={draftUrl} placeholder="https://example.com/api" />
 
-        <label class="custom-tool-label">Headers</label>
+        <span class="custom-tool-label">Headers</span>
         {#each draftHeaders as header, hi (hi)}
           <div class="kv-row">
             <input class="custom-tool-input kv-key" bind:value={header.key} placeholder="Key" />
@@ -275,7 +275,7 @@
         {/each}
         <button class="add-kv-btn" onclick={handleAddHeader}>+ Header</button>
 
-        <label class="custom-tool-label">Parameters</label>
+        <span class="custom-tool-label">Parameters</span>
         {#each draftParams as param, pi (pi)}
           <div class="param-row">
             <input class="custom-tool-input param-name" bind:value={param.name} placeholder="Name" />

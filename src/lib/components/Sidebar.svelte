@@ -74,10 +74,10 @@
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="sidebar-overlay" onclick={handleBackdropClick}>
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="sidebar-panel" onclick={(e: MouseEvent) => e.stopPropagation()}>
+  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+  <div class="sidebar-overlay" role="presentation" onclick={handleBackdropClick}>
+    <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+    <div class="sidebar-panel" role="presentation" onclick={(e: MouseEvent) => e.stopPropagation()}>
       <div class="sidebar-header">
         <span class="sidebar-title">Menu</span>
         <button class="sidebar-close" onclick={onClose}>✕</button>

@@ -1,4 +1,4 @@
-import { config } from '$lib/server/config';
+import { config } from '../config.js';
 
 const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';

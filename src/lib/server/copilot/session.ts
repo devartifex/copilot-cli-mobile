@@ -1,7 +1,15 @@
 import { CopilotClient, approveAll, defineTool } from '@github/copilot-sdk';
 import type { SessionConfig } from '@github/copilot-sdk';
 import { z } from 'zod';
-import type { CustomToolDefinition } from '$lib/types/index.js';
+
+export interface CustomToolDefinition {
+  name: string;
+  description: string;
+  webhookUrl: string;
+  method: 'GET' | 'POST';
+  headers: Record<string, string>;
+  parameters: Record<string, { type: string; description: string }>;
+}
 
 type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh';
 

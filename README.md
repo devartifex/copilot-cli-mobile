@@ -3,6 +3,7 @@
 > **GitHub Copilot CLI — from your phone.** Self-hosted, real-time, powered by the official [Copilot SDK](https://github.com/github/copilot-sdk).
 
 <p align="center">
+  <img src="https://img.shields.io/badge/SvelteKit-5-FF3E00?logo=svelte&logoColor=white" alt="SvelteKit 5">
   <img src="https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white" alt="Node.js 24">
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Copilot_SDK-%5E0.1.32-000000?logo=github&logoColor=white" alt="Copilot SDK">
@@ -30,8 +31,13 @@ The same Copilot CLI you use in your terminal — accessible from any browser. A
 - **Extended thinking** — live reasoning traces for supported models
 - **Modes** — ask / plan / autopilot, just like the CLI
 - **GitHub MCP tools** — issues, PRs, code search, repos — all built in
+- **File attachments** — attach code files and images to messages
+- **Permission control** — approve/deny/always-allow tool execution per tool
+- **Custom webhook tools** — define your own tools backed by HTTP endpoints
+- **Infinite sessions** — automatic context compaction with configurable thresholds
+- **Session management** — list, resume, and delete past sessions
 - **Custom instructions** — appended to the system prompt, SDK guardrails preserved
-- **Mobile-first dark UI** — responsive, touch-optimized, keyboard-aware
+- **Mobile-first dark UI** — SvelteKit 5 with SSR, responsive, touch-optimized
 - **2 env vars to run** — `GITHUB_CLIENT_ID` + `SESSION_SECRET`
 
 ---
@@ -96,36 +102,45 @@ npm install && npm run build && npm start
 ## How It Works
 
 ```
-Browser ──WebSocket──▶ Express Server ──JSON-RPC──▶ @github/copilot CLI subprocess
-   │                       │                              │
-   │  Device Flow auth     │  Session per connection      │  Copilot API
-   │  Streaming render     │  SDK event forwarding        │  GitHub MCP tools
-   ▼                       ▼                              ▼
+Browser (Svelte 5) ──WebSocket──▶ SvelteKit + server.js ──JSON-RPC──▶ @github/copilot CLI subprocess
+        │                               │                                    │
+        │  SSR + Device Flow auth       │  Session pool per user             │  Copilot API
+        │  Rune-based reactive stores   │  SDK event forwarding              │  GitHub MCP tools
+        ▼                               ▼                                    ▼
 ```
 
-1. User opens the app → authenticates via GitHub Device Flow
-2. Token stored server-side in Express session (never sent to browser)
+1. User opens the app → SvelteKit SSR checks session → renders login or chat
+2. Authenticates via GitHub Device Flow, token stored server-side only
 3. WebSocket connection opens → server spawns a `CopilotClient` with its own CLI subprocess
-4. User sends a message → SDK streams events → server forwards them as typed JSON → browser renders in real time
-5. On disconnect → session destroyed, CLI subprocess terminated
+4. User sends a message → SDK streams events → server forwards as typed JSON → Svelte reactively re-renders
+5. On disconnect → session pooled with TTL, reconnect replays buffered messages
+
+> **[Full architecture docs →](docs/ARCHITECTURE.md)**
 
 <details>
 <summary><strong>SDK features implemented</strong></summary>
 
 | Feature | SDK API | UI |
 |---------|---------|-----|
-| Model selection | `SessionConfig.model` + `client.listModels()` | Dropdown in status bar, mid-session switching |
+| Model selection | `SessionConfig.model` + `client.listModels()` | Sidebar dropdown, mid-session switching |
 | Reasoning effort | `SessionConfig.reasoningEffort` | Toggle group (low / medium / high / xhigh) |
 | Streaming | `assistant.message_delta` events | Token-by-token with typing cursor |
 | Extended thinking | `assistant.reasoning_delta` / `reasoning` | Collapsible live reasoning block |
 | Modes | `session.rpc.mode.set()` | Three-button toggle (ask / plan / auto) |
-| Custom instructions | `SessionConfig.systemMessage` (append) | Settings panel textarea |
+| Custom instructions | `SessionConfig.systemMessage` (append) | Settings accordion textarea |
 | GitHub MCP | `SessionConfig.mcpServers` | All GitHub tools, user's token |
-| Tool lifecycle | `tool.execution_start/progress/complete` | Spinner + checkmark |
+| Tool lifecycle | `tool.execution_start/progress/complete` | Animated spinner + checkmark |
 | User input | `onUserInputRequest` callback | Choice buttons + freeform input |
+| Permission hooks | `onPermissionRequest` hook | Allow / Deny / Always Allow with countdown |
+| File attachments | `session.send({ attachments })` | 📎 button, file chips, upload flow |
+| Custom tools | `defineTool()` | Webhook editor in settings |
+| Infinite sessions | `SessionConfig.infiniteSessions` | Configurable compaction thresholds |
+| Session management | `client.listSessions/deleteSession` | Bottom sheet with resume + delete |
 | Subagents | `subagent.started/completed` | Agent display with status |
 | Token usage | `assistant.usage` | Token counts after each response |
 | Abort | `session.abort()` | Stop button during streaming |
+| Context compaction | `session.rpc.compaction.compact()` | Settings button + auto events |
+| Plan management | `session.rpc.plan.*` | Collapsible view/edit panel |
 
 </details>
 
@@ -136,18 +151,19 @@ Browser ──WebSocket──▶ Express Server ──JSON-RPC──▶ @github/
 
 | Type | Purpose |
 |------|---------|
-| `new_session` | Create session with model, reasoning, instructions, excluded tools |
-| `message` | Send user prompt (max 10,000 chars) |
+| `new_session` | Create session with model, reasoning, instructions, tools, attachments |
+| `message` | Send user prompt (max 10,000 chars) with optional file attachments |
 | `list_models` | Fetch available models |
 | `set_mode` | Switch: `interactive` / `plan` / `autopilot` |
 | `set_model` | Change model mid-session |
 | `set_reasoning` | Update reasoning effort |
 | `abort` | Cancel streaming response |
 | `user_input_response` | Reply to SDK prompt |
+| `permission_response` | Reply to tool permission request |
 | `list_tools` / `list_agents` | Discover available tools and agents |
 | `select_agent` / `deselect_agent` | Manage active agents |
 | `get_quota` / `compact` | Usage info and context compaction |
-| `list_sessions` / `resume_session` | Session history |
+| `list_sessions` / `resume_session` / `delete_session` | Session history |
 | `get_plan` / `update_plan` / `delete_plan` | Plan management |
 
 **Server → Client:**
@@ -168,6 +184,8 @@ Browser ──WebSocket──▶ Express Server ──JSON-RPC──▶ @github/
 | `subagent_start` / `subagent_end` / `subagent_failed` | `subagent.*` | Agent lifecycle |
 | `info` / `plan_changed` / `skill_invoked` | `session.*` | Informational |
 | `user_input_request` | `onUserInputRequest` | SDK asks for input |
+| `permission_request` | `onPermissionRequest` | Tool permission prompt |
+| `session_deleted` | `client.deleteSession()` | Session removal confirmation |
 | `elicitation_requested` / `elicitation_completed` | `elicitation.*` | Structured prompts |
 | `compaction_start` / `compaction_complete` | `session.compaction_*` | Context management |
 | `models` | `client.listModels()` | Model list |
@@ -179,15 +197,17 @@ Browser ──WebSocket──▶ Express Server ──JSON-RPC──▶ @github/
 <summary><strong>Security</strong></summary>
 
 - **Server-side tokens** — GitHub token in Express session, never sent to browser
-- **Helmet** — CSP, HSTS, X-Frame-Options, X-Content-Type-Options
-- **Rate limiting** — 200 req / 15 min per IP
-- **Secure cookies** — httpOnly, secure (prod), sameSite: lax, 30-day rolling
-- **Session fixation** — `session.regenerate()` after auth
+- **CSP** — Content Security Policy via SvelteKit hooks (self, unsafe-inline for Svelte, ws/wss)
+- **Rate limiting** — 200 req / 15 min per IP (Map-based in hooks.server.ts)
+- **Secure cookies** — httpOnly, secure (prod), sameSite: lax
 - **Token freshness** — configurable expiry + GitHub API revalidation on WebSocket connect
 - **Origin validation** — WebSocket origin checked against `BASE_URL` in production
 - **User allowlist** — optional `ALLOWED_GITHUB_USERS`
 - **Input limits** — 10,000 char messages, 2,000 char instructions (server-enforced)
-- **XSS prevention** — DOMPurify + SRI hashes on CDN scripts
+- **Upload limits** — 10MB per file, 5 files max, extension allowlist, path traversal prevention
+- **XSS prevention** — DOMPurify on all rendered markdown
+- **SSRF prevention** — Internal IP range blocklist for custom webhook tools
+- **Permission hooks** — Per-tool allow/deny with 30s auto-deny timeout
 - **System prompt safety** — append mode only, SDK guardrails preserved
 
 </details>
@@ -196,33 +216,37 @@ Browser ──WebSocket──▶ Express Server ──JSON-RPC──▶ @github/
 <summary><strong>Project structure</strong></summary>
 
 ```
-src/
-├── index.ts              # HTTP server + WebSocket setup
-├── config.ts             # Env var validation (fail-fast)
-├── server.ts             # Express app + middleware
-├── security-log.ts       # Structured security logging
-├── auth/
-│   ├── github.ts         # Device Flow OAuth
-│   └── middleware.ts     # Session guard + token freshness
-├── copilot/
-│   ├── client.ts         # CopilotClient factory
-│   └── session.ts        # SessionConfig builder
-├── routes/
-│   ├── auth.ts           # /auth/* endpoints
-│   └── api.ts            # /api/* endpoints (guarded)
-├── ws/
-│   └── handler.ts        # WebSocket message routing + SDK events
-└── types/
-    └── session.d.ts      # Session type augmentation
+server.js                       # Custom entry: HTTP + WebSocket + SvelteKit handler
+svelte.config.js                # SvelteKit config (adapter-node)
+vite.config.ts                  # Vite config
 
-public/
-├── index.html            # SPA shell (login + chat)
-├── css/style.css         # Dark theme, mobile-first
-└── js/
-    ├── app.js            # Init + auth orchestration
-    ├── auth.js           # Device flow client
-    └── chat.js           # WebSocket + markdown rendering
+src/
+├── app.html                    # SvelteKit shell (viewport, theme-color, PWA meta)
+├── app.css                     # Global reset, design tokens, highlight.js theme
+├── hooks.server.ts             # Session bridge, CSP headers, rate limiting
+├── lib/
+│   ├── components/             # 17 Svelte 5 components (chat, auth, settings, etc.)
+│   ├── stores/                 # Rune stores: auth, chat, settings, ws
+│   │   ├── auth.svelte.ts          # Device flow state, polling, countdown
+│   │   ├── chat.svelte.ts          # Messages, streaming, tool calls, models, plan
+│   │   ├── settings.svelte.ts      # Persisted preferences (localStorage)
+│   │   └── ws.svelte.ts            # WebSocket connection + typed send helpers
+│   ├── server/                 # Server-only code
+│   │   ├── auth/github.ts          # Device Flow OAuth
+│   │   ├── copilot/client.ts       # CopilotClient factory
+│   │   ├── copilot/session.ts      # Session config builder
+│   │   ├── ws/handler.ts           # WebSocket: 22+ message types + SDK events
+│   │   └── ws/session-pool.ts      # Per-user session pool with TTL
+│   ├── types/index.ts          # All types: 34 server + 19 client messages
+│   └── utils/markdown.ts       # Markdown pipeline (marked + DOMPurify + hljs)
+├── routes/
+│   ├── +page.svelte            # Main: login or chat (wires all components)
+│   ├── auth/device/…           # Device Flow endpoints
+│   ├── api/…                   # Models, upload, version
+│   └── health/+server.ts       # Health check
 ```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture, data flow, and component inventory.
 
 </details>
 
@@ -260,7 +284,7 @@ The app requests the following OAuth scopes when the user authenticates:
 ### Token lifecycle
 
 1. **Acquisition** — User authenticates via Device Flow; token is returned by GitHub's OAuth endpoint
-2. **Storage** — Token is stored **server-side only** in the Express session (encrypted via `SESSION_SECRET`). It is **never sent to the browser**.
+2. **Storage** — Token is stored **server-side only** in the Express session (encrypted via `SESSION_SECRET`), bridged to SvelteKit via `hooks.server.ts`. It is **never sent to the browser**.
 3. **Freshness** — Token age is checked on every API request against `TOKEN_MAX_AGE_MS`. On WebSocket connect, the token is also validated against `GET /user` to catch revoked tokens.
 4. **Revocation** — When the user logs out or the session expires, the token is destroyed server-side. Users can also revoke the token from [GitHub Settings → Applications](https://github.com/settings/applications).
 

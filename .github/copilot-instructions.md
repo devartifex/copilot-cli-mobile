@@ -4,93 +4,95 @@
 
 Self-hosted web app that brings GitHub Copilot CLI to mobile browsers via the official `@github/copilot-sdk`. Users authenticate with GitHub Device Flow, pick a model, and chat over WebSocket with real-time token streaming. Full parity with the desktop Copilot CLI (including built-in tools for GitHub API, file access, and shell).
 
+> See [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) for full architecture details, data flow diagrams, and component inventory.
+
 ## Architecture
 
-- **Backend**: Express + TypeScript (Node.js 24)
-- **Frontend**: Vanilla JS SPA (no framework) — dark theme, mobile-first
-- **Real-time**: WebSocket with per-connection `CopilotClient` lifecycle
+- **Full-stack**: SvelteKit 5 with `adapter-node` (replaces Express + vanilla JS)
+- **Frontend**: 17 Svelte 5 components with rune-based stores — dark theme, mobile-first
+- **Real-time**: WebSocket via custom `server.js` entry, per-user `CopilotClient` lifecycle
 - **Auth**: GitHub Device Flow only (no client secret, no redirect URI)
-- **Session**: Server-side Express sessions (file store in dev, default MemoryStore in prod)
+- **Session**: Express sessions bridged to SvelteKit via `x-session-id` header in `hooks.server.ts`
 - **Deployment**: Docker container → Azure Container Apps via `azd up` or GitHub Actions
+
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Runtime | Node.js 24 (node:24-slim in Docker) |
-| Language | TypeScript 5.7 (strict mode, ES2022, NodeNext modules) |
-| Server | Express 4.x |
+| Language | TypeScript 5.7 (strict mode, ES2022) |
+| Framework | SvelteKit 5 with `adapter-node` |
+| Reactivity | Svelte 5 runes ($state, $derived, $effect, $props) |
 | AI Engine | `@github/copilot-sdk` ^0.1.32 |
-| WebSocket | `ws` ^8.18 |
-| Security | Helmet (CSP, HSTS), express-rate-limit, DOMPurify, CORS policy on ACA |
-| Sessions | express-session + session-file-store (dev only) |
-| Build | `tsc` → `dist/` |
+| WebSocket | `ws` ^8.18 via custom server.js |
+| Markdown | `marked` + `dompurify` + `highlight.js` (npm, bundled by Vite) |
+| Security | Helmet-like CSP in hooks.server.ts, rate limiting, DOMPurify |
+| Sessions | express-session bridged to SvelteKit locals |
+| Build | `vite build` → `build/` via adapter-node |
+| Testing | Playwright (desktop + mobile viewports) |
 | Container | Multi-stage Dockerfile (builder + runtime) |
-| IaC | Bicep (Container Apps, ACR, Managed Identity, Log Analytics, App Insights) |
-| CI/CD | GitHub Actions (ci.yml + deploy.yml) |
+| IaC | Bicep (Container Apps, ACR, Managed Identity) |
 
 ## Project Structure
 
 ```
-src/
-├── index.ts              # Entry point — HTTP server + WebSocket setup
-├── config.ts             # Env var validation (fail-fast)
-├── server.ts             # Express app, middleware stack, routes
-├── security-log.ts       # Structured security event logging
-├── auth/
-│   ├── github.ts         # GitHub Device Flow OAuth (fetch-based)
-│   └── middleware.ts     # requireGitHub guard + token freshness check
-├── copilot/
-│   ├── client.ts         # CopilotClient factory
-│   └── session.ts        # Session creation, model listing, MCP config
-├── routes/
-│   ├── auth.ts           # /auth/* (device/start, device/poll, logout, status)
-│   └── api.ts            # /api/* (models, version, client-error) — behind requireGitHub
-├── ws/
-│   └── handler.ts        # WebSocket: chat streaming, message protocol, token revalidation
-└── types/
-    └── session.d.ts      # Express session type augmentation
+server.js                       # Custom entry: HTTP + express-session + WebSocket + SvelteKit handler
+svelte.config.js                # SvelteKit config (adapter-node)
+vite.config.ts                  # Vite config
 
-public/
-├── index.html            # SPA shell (two screens: login + chat)
-├── css/
-│   ├── style.css         # Dark theme, mobile-first, CSS custom properties
-│   └── github-dark.min.css # Syntax highlighting theme
-└── js/
-    ├── app.js            # App init + auth orchestration
-    ├── auth.js           # Device flow API client
-    └── chat.js           # WebSocket client, markdown rendering, streaming
+src/
+├── app.html                    # SvelteKit shell (viewport, theme-color, PWA meta)
+├── app.css                     # Global reset, design tokens, highlight.js theme
+├── hooks.server.ts             # Session bridge, CSP headers, rate limiting
+│
+├── lib/
+│   ├── components/             # 17 Svelte 5 components (see ARCHITECTURE.md)
+│   ├── stores/                 # Rune stores: auth, chat, settings, ws
+│   ├── server/                 # Server-only: auth, copilot, ws handler, config
+│   ├── types/index.ts          # All types: 34 server + 19 client message types
+│   └── utils/markdown.ts       # Shared markdown pipeline
+│
+├── routes/
+│   ├── +page.svelte            # Main page: login or full chat screen
+│   ├── +layout.server.ts       # Root: auth check from session
+│   ├── auth/device/…           # Device Flow endpoints
+│   ├── api/…                   # Models, upload, version, client-error
+│   └── health/+server.ts       # Health check
 ```
 
 ## Conventions
 
 ### Code Style
 - **TypeScript**: camelCase for functions/variables, PascalCase for types
-- **Files**: kebab-case (e.g., `container-apps.bicep`, `session.d.ts`)
-- **CSS**: kebab-case class names, CSS custom properties for theming
-- **No frameworks**: Frontend is vanilla JS — do not introduce React, Vue, or similar
+- **Files**: kebab-case (e.g., `session-pool.ts`, `auth.svelte.ts`)
+- **CSS**: Component-scoped `<style>` blocks, CSS custom properties for theming
+- **Framework**: Svelte 5 with runes — do not introduce React, Vue, or other frameworks
 - **ES Modules**: `"type": "module"` in package.json; use `.js` extensions in imports
 
-### Patterns
-- **Factory functions** over classes (e.g., `createCopilotClient()`)
+### Svelte Patterns
+- **Runes**: `$state()` for local state, `$derived()` for computed, `$effect()` for side effects only
+- **Props**: `$props()` with TypeScript interface annotations
+- **Stores**: Factory functions returning getter-based interfaces (not classes)
+- **Components**: Small, focused, single responsibility, component-scoped CSS
+- **Lists**: Keyed `{#each}` blocks, `{#snippet}` for reusable template logic
+
+### Backend Patterns
+- **Factory functions** over classes (e.g., `createCopilotClient()`, `createChatStore()`)
 - **Named exports** only (no default exports)
 - **Fail-fast validation** in `config.ts` — throw on missing required env vars
 - **Try-catch** in route handlers and WebSocket — return JSON errors to client
-- **Defensive model listing** — return empty array on error, handle multiple API response shapes
-- **Server-side secrets** — GitHub token stored in Express session, never sent to browser
 - **Message type whitelist** — WebSocket handler validates against `VALID_MESSAGE_TYPES` Set
+- **Session disconnect** — use `session.disconnect()` (not deprecated `destroy()`)
 
 ### Security
-- CSP via Helmet: self + cdn.jsdelivr.net + GitHub avatars + WebSocket
-- Rate limiting: 200 requests per 15 minutes per IP
-- Session cookies: httpOnly, secure (prod), sameSite: lax, 30-day rolling
-- Session fixation protection: `session.regenerate()` after GitHub auth
+- CSP in hooks.server.ts: self + unsafe-inline (Svelte) + ws/wss + GitHub avatars
+- Rate limiting: 200 requests per 15 minutes per IP (Map-based)
+- Session cookies: httpOnly, secure (prod), sameSite: lax
 - XSS prevention: DOMPurify sanitizes all rendered markdown
-- Max message length: 10,000 chars (validated server-side in `ws/handler.ts`)
-- No client secret in OAuth — device flow only needs `GITHUB_CLIENT_ID`
-- Trust proxy only in production
-- Token revalidation: WebSocket connections validate GitHub token against GitHub API on connect
-- ACA ingress: CORS policy restricts origins, optional IP restrictions via Bicep params
-- Allowed users: optional allowlist via `ALLOWED_GITHUB_USERS` (passed as Bicep param, stored as native ACA secret)
+- Max message length: 10,000 chars (server-enforced)
+- Upload limits: 10MB per file, 5 files max, extension allowlist
+- SSRF prevention: internal IP range blocklist for custom webhook tools
+- Token revalidation on WebSocket connect (catches revoked tokens)
 
 ### Environment Variables
 | Variable | Required | Default | Purpose |
@@ -98,39 +100,36 @@ public/
 | `GITHUB_CLIENT_ID` | Yes | — | GitHub OAuth App client ID |
 | `SESSION_SECRET` | Yes | — | Session cookie encryption |
 | `PORT` | No | 3000 | HTTP server port |
-| `BASE_URL` | No | http://localhost:3000 | Cookie domain + WebSocket origin validation |
+| `BASE_URL` | No | http://localhost:3000 | Cookie domain + WS origin validation |
 | `NODE_ENV` | No | development | Dev vs prod behavior |
-| `SESSION_STORE_PATH` | No | .sessions | File-based session directory (dev only) |
-| `ALLOWED_GITHUB_USERS` | No | — | Comma-separated GitHub usernames allowed to log in |
-| `TOKEN_MAX_AGE_MS` | No | 604800000 (7d) | Force re-auth after this many ms |
+| `ALLOWED_GITHUB_USERS` | No | — | Comma-separated GitHub usernames |
+| `TOKEN_MAX_AGE_MS` | No | 86400000 | Force re-auth interval (24h) |
 
 ## Build & Run
 
 ```bash
 # Docker (recommended)
-docker compose up --build        # dev with hot-reload of public/
-npm run dev                      # alias for docker compose up
+docker compose up --build
 
 # Local (requires Node 24+)
 npm install && npm run build && npm start
-npm run dev:local                # tsx watch mode
+
+# Development
+npm run dev                      # Vite dev server
 
 # Type check
-npm run lint                     # tsc --noEmit
+npm run check                    # svelte-check
+
+# Tests
+npx playwright test              # E2E tests (desktop + mobile)
 ```
-
-## Deployment
-
-- **Azure**: `azd up` provisions ACR + Container Apps + Managed Identity + monitoring. Secrets stored natively in Container Apps. CORS, IP restrictions, and allowed users are configurable via Bicep params (`ipRestrictions`, `allowedGithubUsers`).
-- **CI**: GitHub Actions — ci.yml (lint + build on every push), deploy.yml (Docker build → ACR → Container Apps on push to main)
-- **Docker**: Node 24 multi-stage build, installs `@github/copilot` CLI globally, drops to `node` user
 
 ## Important Notes
 
 - The Copilot SDK spawns a CLI subprocess per connection — each `CopilotClient` must be `.stop()`'d on disconnect
-- WebSocket connections share Express session middleware for auth validation
-- WebSocket connections validate the GitHub token against GitHub's API on connect (catches revoked tokens)
+- `server.js` is the custom entry: registers express-session, sets `x-session-id` header, upgrades WebSocket, then delegates to SvelteKit handler
+- WebSocket connections validate the GitHub token against GitHub's API on connect
 - Model defaults to `gpt-4.1` if not specified
-- The `approveAll` permission handler matches desktop CLI behavior (SDK built-in tools are auto-approved)
-- `excludedTools` and `availableTools` are supported in `SessionConfig` for tool filtering
+- Permission hooks: `approveAll` in autopilot mode, interactive prompts in other modes
+- Custom tools use webhook HTTP calls with SSRF protection
 - The SDK's `@github/copilot` CLI needs `node:sqlite` which ships with Node 24

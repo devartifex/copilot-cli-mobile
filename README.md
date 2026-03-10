@@ -22,12 +22,6 @@ The same Copilot CLI you use in your terminal — accessible from any browser. A
   &nbsp;&nbsp;
   <img src="docs/screenshots/chat-mobile.png" width="320" alt="Chat — mobile">
 </p>
-<p align="center">
-  <img src="docs/screenshots/login-desktop.png" width="700" alt="Login — desktop">
-</p>
-<p align="center">
-  <img src="docs/screenshots/chat-desktop.png" width="700" alt="Chat — desktop">
-</p>
 
 ---
 

@@ -37,7 +37,7 @@
     "@sveltejs/adapter-node": "^5.5.4",
     "@sveltejs/kit": "^2.53.4",
     "dompurify": "^3.3.2",
-    "dotenv": "^16.4.0",
+    "dotenv": "^17.3.1",
     "express": "^4.21.0",
     "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.0",

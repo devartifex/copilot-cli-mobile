@@ -17,10 +17,12 @@
     customInstructions: string;
     excludedTools: string[];
     customTools: CustomToolDefinition[];
+    githubMcpReadonly: boolean;
     onClose: () => void;
     onSaveInstructions: (instructions: string) => void;
     onToggleTool: (toolName: string, enabled: boolean) => void;
     onSaveCustomTools: (tools: CustomToolDefinition[]) => void;
+    onToggleGithubMcpReadonly: (value: boolean) => void;
     onSelectAgent: (name: string) => void;
     onDeselectAgent: () => void;
     onCompact: () => void;
@@ -38,10 +40,12 @@
     customInstructions,
     excludedTools,
     customTools,
+    githubMcpReadonly,
     onClose,
     onSaveInstructions,
     onToggleTool,
     onSaveCustomTools,
+    onToggleGithubMcpReadonly,
     onSelectAgent,
     onDeselectAgent,
     onCompact,
@@ -50,7 +54,7 @@
     onFetchQuota,
   }: Props = $props();
 
-  type AccordionSection = 'instructions' | 'tools' | 'custom-tools' | 'agents' | 'quota' | 'compact' | null;
+  type AccordionSection = 'instructions' | 'tools' | 'mcp' | 'custom-tools' | 'agents' | 'quota' | 'compact' | null;
 
   let activeSection = $state<AccordionSection>(null);
   let instructionsDraft = $state('');
@@ -223,6 +227,40 @@
                   </div>
                 {/each}
               {/if}
+            </div>
+          {/if}
+        </div>
+
+        <!-- MCP Servers -->
+        <div class="settings-accordion">
+          <button
+            class="settings-accordion-btn"
+            class:open={activeSection === 'mcp'}
+            onclick={() => toggleSection('mcp')}
+          >
+            MCP Servers
+            <span class="accordion-chevron">▸</span>
+          </button>
+          {#if activeSection === 'mcp'}
+            <div class="settings-accordion-body">
+              <div class="mcp-server-item">
+                <div class="mcp-server-header">
+                  <span class="mcp-server-name">GitHub</span>
+                  <span class="mcp-server-url">api.githubcopilot.com</span>
+                </div>
+                <div class="mcp-server-option">
+                  <label class="tool-toggle-label">
+                    <input
+                      type="checkbox"
+                      class="tool-toggle-check"
+                      checked={!githubMcpReadonly}
+                      onchange={(e: Event) => onToggleGithubMcpReadonly(!(e.target as HTMLInputElement).checked)}
+                    />
+                    <span class="tool-toggle-name">Write access</span>
+                  </label>
+                  <div class="tool-toggle-desc">Create repos, open issues, push files, manage PRs, etc.</div>
+                </div>
+              </div>
             </div>
           {/if}
         </div>
@@ -491,6 +529,27 @@
     color: var(--fg-dim);
     padding-left: 24px;
     margin-top: 1px;
+  }
+  .mcp-server-item {
+    padding: var(--sp-1) 0;
+  }
+  .mcp-server-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+  }
+  .mcp-server-name {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--purple);
+  }
+  .mcp-server-url {
+    font-size: 0.72em;
+    color: var(--fg-dim);
+  }
+  .mcp-server-option {
+    padding-left: var(--sp-1);
   }
 
   /* Agents */

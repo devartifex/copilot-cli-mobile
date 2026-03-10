@@ -30,6 +30,7 @@ export interface CreateSessionOptions {
   onUserInputRequest?: SessionConfig['onUserInputRequest'];
   permissionMode?: 'approve_all' | 'prompt';
   onPermissionRequest?: SessionConfig['onPermissionRequest'];
+  githubMcpReadonly?: boolean;
 }
 
 const BLOCKED_RANGES = ['10.', '172.16.', '172.17.', '172.18.', '172.19.',
@@ -98,7 +99,9 @@ export async function createCopilotSession(
     mcpServers: {
       github: {
         type: 'http',
-        url: 'https://api.githubcopilot.com/mcp/x/all/readonly',
+        url: options.githubMcpReadonly
+          ? 'https://api.githubcopilot.com/mcp/x/all/readonly'
+          : 'https://api.githubcopilot.com/mcp/x/all',
         headers: {
           Authorization: `Bearer ${githubToken}`,
         },

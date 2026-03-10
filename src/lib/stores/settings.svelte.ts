@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS: PersistedSettings = {
   customInstructions: '',
   excludedTools: [],
   customTools: [],
+  githubMcpReadonly: false,
 };
 
 const VALID_MODES = new Set<SessionMode>(['interactive', 'plan', 'autopilot']);
@@ -39,6 +40,7 @@ export interface SettingsStore {
   reasoningEffort: ReasoningEffort;
   selectedModel: string;
   selectedMode: SessionMode;
+  githubMcpReadonly: boolean;
   load(): void;
   save(): void;
 }
@@ -50,6 +52,7 @@ export function createSettingsStore(): SettingsStore {
   let reasoningEffort = $state<ReasoningEffort>(DEFAULT_SETTINGS.reasoningEffort);
   let selectedModel = $state(DEFAULT_SETTINGS.model);
   let selectedMode = $state<SessionMode>(DEFAULT_SETTINGS.mode);
+  let githubMcpReadonly = $state(DEFAULT_SETTINGS.githubMcpReadonly ?? false);
 
   function load(): void {
     if (typeof localStorage === 'undefined') return;
@@ -76,6 +79,9 @@ export function createSettingsStore(): SettingsStore {
       if (Array.isArray(parsed.customTools)) {
         customTools = parsed.customTools.filter(isValidCustomTool).slice(0, 10);
       }
+      if (typeof parsed.githubMcpReadonly === 'boolean') {
+        githubMcpReadonly = parsed.githubMcpReadonly;
+      }
     } catch {
       // Ignore corrupt data
     }
@@ -91,6 +97,7 @@ export function createSettingsStore(): SettingsStore {
         customInstructions,
         excludedTools,
         customTools,
+        githubMcpReadonly,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
@@ -116,6 +123,9 @@ export function createSettingsStore(): SettingsStore {
 
     get selectedMode() { return selectedMode; },
     set selectedMode(v: SessionMode) { selectedMode = v; save(); },
+
+    get githubMcpReadonly() { return githubMcpReadonly; },
+    set githubMcpReadonly(v: boolean) { githubMcpReadonly = v; save(); },
 
     load,
     save,

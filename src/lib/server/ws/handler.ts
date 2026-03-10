@@ -348,6 +348,8 @@ export function setupWebSocket(
 
               const customTools = Array.isArray(msg.customTools) ? msg.customTools.slice(0, 10) : undefined;
 
+              const githubMcpReadonly = msg.githubMcpReadonly === true;
+
               connectionEntry.session = await createCopilotSession(connectionEntry.client, githubToken, {
                 model: msg.model,
                 reasoningEffort: msg.reasoningEffort,
@@ -358,6 +360,7 @@ export function setupWebSocket(
                 onUserInputRequest: makeUserInputHandler(connectionEntry),
                 permissionMode,
                 onPermissionRequest: makePermissionHandler(connectionEntry),
+                githubMcpReadonly,
               });
 
               wireSessionEvents(connectionEntry.session, connectionEntry);

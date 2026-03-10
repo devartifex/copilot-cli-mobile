@@ -421,6 +421,7 @@ export interface NewSessionMessage {
   customInstructions?: string;
   excludedTools?: string[];
   customTools?: CustomToolDefinition[];
+  githubMcpReadonly?: boolean;
 }
 
 export interface SendMessage {
@@ -627,6 +628,7 @@ export interface NewSessionConfig {
   customInstructions?: string;
   excludedTools?: string[];
   customTools?: CustomToolDefinition[];
+  githubMcpReadonly?: boolean;
 }
 
 // ─── Settings (persisted to localStorage) ───────────────────────────────────
@@ -638,4 +640,5 @@ export interface PersistedSettings {
   customInstructions: string;
   excludedTools: string[];
   customTools: CustomToolDefinition[];
+  githubMcpReadonly?: boolean;
 }

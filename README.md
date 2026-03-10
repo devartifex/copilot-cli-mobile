@@ -278,7 +278,7 @@ The app requests the following OAuth scopes when the user authenticates:
 | Usage | Detail |
 |-------|--------|
 | **Copilot API** | Passed to `CopilotClient` to authenticate against the Copilot API for chat completions and model listing |
-| **GitHub MCP tools** | Passed as a Bearer token to the GitHub MCP server (`/mcp/x/all/readonly`) for built-in tools (issues, PRs, code search) |
+| **GitHub MCP tools** | Passed as a Bearer token to the GitHub MCP server (`/mcp/x/all`) for built-in tools (issues, PRs, code search, repo management) |
 | **Identity validation** | Used to call `GET /user` on the GitHub API to verify the user's identity and check token validity |
 
 ### Token lifecycle

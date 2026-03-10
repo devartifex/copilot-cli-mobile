@@ -228,6 +228,61 @@ public/
 
 ---
 
+## Authentication & Authorization
+
+This section documents the OAuth model, token scopes, and runtime authorization to help teams evaluate the app for security and governance.
+
+### OAuth App type
+
+This app uses a **GitHub OAuth App** (not a GitHub App). It authenticates via the [Device Flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow) — the same flow used by the GitHub CLI. No client secret is needed; only the **Client ID** is required.
+
+### Token scopes
+
+The app requests the following OAuth scopes when the user authenticates:
+
+| Scope | Why it's needed | What it grants |
+|-------|-----------------|----------------|
+| `copilot` | Required by the Copilot SDK to call the Copilot API | Access to Copilot chat completions and model listing |
+| `read:user` | Display the user's name and avatar in the UI | **Read-only** access to the user's GitHub profile |
+| `repo` | Required by the SDK's built-in tools (file access, shell commands, code search) | **Read and write** access to all repositories the user can access |
+
+> [!IMPORTANT]
+> The `repo` scope is broad — it grants read/write access to the user's repositories. This is required because the Copilot SDK's built-in tools (file operations, shell, code search) need repository access to function. This matches the permissions of the desktop Copilot CLI. If your governance policy restricts this scope, consider using `ALLOWED_GITHUB_USERS` to limit who can authenticate, or use `excludedTools` in the session config to disable tools that require repo access.
+
+### How the token is used
+
+| Usage | Detail |
+|-------|--------|
+| **Copilot API** | Passed to `CopilotClient` to authenticate against the Copilot API for chat completions and model listing |
+| **GitHub MCP tools** | Passed as a Bearer token to the GitHub MCP server (`/mcp/x/all/readonly`) for built-in tools (issues, PRs, code search) |
+| **Identity validation** | Used to call `GET /user` on the GitHub API to verify the user's identity and check token validity |
+
+### Token lifecycle
+
+1. **Acquisition** — User authenticates via Device Flow; token is returned by GitHub's OAuth endpoint
+2. **Storage** — Token is stored **server-side only** in the Express session (encrypted via `SESSION_SECRET`). It is **never sent to the browser**.
+3. **Freshness** — Token age is checked on every API request against `TOKEN_MAX_AGE_MS`. On WebSocket connect, the token is also validated against `GET /user` to catch revoked tokens.
+4. **Revocation** — When the user logs out or the session expires, the token is destroyed server-side. Users can also revoke the token from [GitHub Settings → Applications](https://github.com/settings/applications).
+
+### Access control
+
+| Control | Description |
+|---------|-------------|
+| **User allowlist** | Set `ALLOWED_GITHUB_USERS` (comma-separated) to restrict login to specific GitHub accounts |
+| **Copilot license** | A GitHub Copilot license (free, pro, or enterprise) is required — users without one cannot use the Copilot API |
+| **Session expiry** | Sessions expire after `TOKEN_MAX_AGE_MS` (default: 24h), forcing re-authentication |
+| **Rate limiting** | 200 requests per 15 minutes per IP address |
+| **IP restrictions** | When deployed to Azure, IP allowlists can be configured via the `ipRestrictions` Bicep parameter |
+
+### What this app does NOT do
+
+- **No client secret** — Device Flow does not require or use a client secret
+- **No server-side repo operations** — The server itself never reads or writes repositories; repo access is used only by the Copilot SDK's built-in tools running within the user's own session
+- **No token sharing** — Each user's token is isolated in their own server-side session
+- **No long-term storage** — Tokens are held only in-memory (or file-based sessions in dev); nothing is persisted to a database
+
+---
+
 ## Deploy to Azure
 
 <details>

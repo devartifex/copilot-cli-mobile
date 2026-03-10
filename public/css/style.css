@@ -889,6 +889,49 @@ html, body {
   font-size: 0.85em;
 }
 #message-input:disabled { opacity: 0.4; transition: opacity 0.2s ease; }
+#message-input:disabled::placeholder { animation: inputLoading 1.5s ease-in-out infinite; }
+
+@keyframes inputLoading {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* Model select loading state */
+#model-select:disabled { opacity: 0.5; }
+#model-select.loading { animation: pulse 1.5s ease-in-out infinite; }
+
+/* Spinner dots animation */
+.spinner-dots {
+  display: inline-block;
+  width: 1.5em;
+  text-align: left;
+  font-family: var(--font-mono);
+}
+.spinner-dots::after {
+  content: '⠋';
+  animation: brailleSpinner 0.8s steps(1) infinite;
+}
+@keyframes brailleSpinner {
+  0%   { content: '⠋'; }
+  12%  { content: '⠙'; }
+  25%  { content: '⠹'; }
+  37%  { content: '⠸'; }
+  50%  { content: '⠼'; }
+  62%  { content: '⠴'; }
+  75%  { content: '⠦'; }
+  87%  { content: '⠧'; }
+}
+
+/* Settings accordion loading */
+.settings-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  color: var(--fg-dim);
+  font-size: 0.82em;
+  font-family: var(--font-mono);
+}
 
 /* Status bar */
 .status-bar {
@@ -1837,10 +1880,88 @@ html, body {
 .quota-dot.quota-red { background: var(--red); }
 
 /* ============================================================
-   Session History
+   Sessions Sheet (bottom sheet pattern for mobile)
+   ============================================================ */
+.sessions-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 110;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+.sessions-sheet {
+  background: var(--bg-raised);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  width: 100%;
+  max-width: 480px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.25s ease;
+}
+.sessions-overlay.open .sessions-sheet {
+  transform: translateY(0);
+}
+.sessions-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+.sessions-sheet-title {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--fg);
+}
+.sessions-sheet-close {
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font-size: 1.1em;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  min-height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+.sessions-sheet-close:active {
+  background: var(--border);
+  color: var(--fg);
+}
+.sessions-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-3) var(--sp-4);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Sessions loading indicator */
+.sessions-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4) 0;
+  justify-content: center;
+  color: var(--fg-dim);
+  font-size: 0.82em;
+  font-family: var(--font-mono);
+}
+
+/* ============================================================
+   Session Items
    ============================================================ */
 .session-item {
-  padding: var(--sp-2) var(--sp-1);
+  padding: var(--sp-3) var(--sp-2);
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: background 0.15s ease;

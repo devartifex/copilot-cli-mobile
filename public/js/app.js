@@ -208,6 +208,39 @@ function initChat(status) {
     Chat.newChat();
   });
 
+  // Sessions sheet
+  const sessionsOverlay = document.getElementById('sessions-overlay');
+  const sessionsSheet = document.getElementById('sessions-sheet');
+
+  function openSessions() {
+    closeSidebar();
+    const loading = document.getElementById('sessions-loading');
+    const list = document.getElementById('sessions-list');
+    if (loading) loading.style.display = '';
+    if (list) list.innerHTML = '';
+    sessionsOverlay.style.display = 'flex';
+    requestAnimationFrame(() => sessionsOverlay.classList.add('open'));
+    if (Chat.ws && Chat.ws.readyState === WebSocket.OPEN) {
+      Chat.ws.send(JSON.stringify({ type: 'list_sessions' }));
+    }
+  }
+
+  function closeSessions() {
+    sessionsOverlay.classList.remove('open');
+    sessionsSheet.addEventListener('transitionend', function handler() {
+      sessionsSheet.removeEventListener('transitionend', handler);
+      if (!sessionsOverlay.classList.contains('open')) {
+        sessionsOverlay.style.display = 'none';
+      }
+    });
+  }
+
+  document.getElementById('sessions-btn').addEventListener('click', openSessions);
+  document.getElementById('sessions-close').addEventListener('click', closeSessions);
+  sessionsOverlay.addEventListener('click', (e) => {
+    if (e.target === sessionsOverlay) closeSessions();
+  });
+
   document.getElementById('logout-btn').addEventListener('click', () => {
     closeSidebar();
     if (confirm('Sign out?')) Auth.logout();
@@ -309,8 +342,6 @@ function initChat(status) {
           Chat.ws.send(JSON.stringify({ type: 'list_agents' }));
         } else if (sectionId === 'quota-section') {
           Chat.ws.send(JSON.stringify({ type: 'get_quota' }));
-        } else if (sectionId === 'sessions-section') {
-          Chat.ws.send(JSON.stringify({ type: 'list_sessions' }));
         }
       }
     });

@@ -117,7 +117,7 @@
               <span id="quota-indicator" class="quota-dot" style="display:none"></span>
             </div>
             <div class="status-right">
-              <span id="model-label" class="model-label">gpt-4.1</span>
+              <span id="model-label" class="model-label">…</span>
               <button class="action-btn stop-btn" id="stop-btn" title="Stop response" style="display:none">stop</button>
               <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Menu" aria-label="Open menu">☰</button>
             </div>
@@ -145,8 +145,8 @@
         </div>
         <div class="sidebar-section">
           <label class="sidebar-label">Model</label>
-          <select id="model-select" class="sidebar-select" title="Model">
-            <option value="gpt-4.1">gpt-4.1</option>
+          <select id="model-select" class="sidebar-select" title="Model" disabled>
+            <option value="">Loading models…</option>
           </select>
         </div>
         <div class="sidebar-section" id="sidebar-reasoning-section" style="display:none">
@@ -163,6 +163,10 @@
           <span class="sidebar-action-icon">+</span>
           <span>New Chat</span>
         </button>
+        <button class="sidebar-action" id="sessions-btn">
+          <span class="sidebar-action-icon">↻</span>
+          <span>Sessions</span>
+        </button>
         <button class="sidebar-action" id="settings-btn">
           <span class="sidebar-action-icon">⚙</span>
           <span>Settings</span>
@@ -172,6 +176,23 @@
           <span class="sidebar-action-icon">⏻</span>
           <span>Sign Out</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SESSIONS SHEET -->
+  <div id="sessions-overlay" class="sessions-overlay" style="display:none">
+    <div class="sessions-sheet" id="sessions-sheet">
+      <div class="sessions-sheet-header">
+        <span class="sessions-sheet-title">Sessions</span>
+        <button class="sessions-sheet-close" id="sessions-close">✕</button>
+      </div>
+      <div class="sessions-sheet-body" id="sessions-sheet-body">
+        <div class="sessions-loading" id="sessions-loading">
+          <span class="spinner-dots"></span>
+          <span>Loading sessions…</span>
+        </div>
+        <div id="sessions-list"></div>
       </div>
     </div>
   </div>
@@ -221,17 +242,6 @@
             <div id="settings-quota-content" class="settings-list">
               <div class="settings-hint">Loading quota...</div>
             </div>
-          </div>
-        </div>
-
-        <div class="settings-section settings-accordion">
-          <button class="settings-accordion-btn" data-section="sessions-section">
-            <span>📂 Sessions</span>
-            <span class="accordion-chevron">▶</span>
-          </button>
-          <div class="settings-accordion-body" id="sessions-section" style="display:none">
-            <p class="settings-hint">Resume a previous session.</p>
-            <div id="settings-sessions-list" class="settings-list"></div>
           </div>
         </div>
 

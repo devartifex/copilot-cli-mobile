@@ -161,6 +161,7 @@ const Chat = {
         this.sessionReady = true;
         this.setStatus('connected');
         this.enableInput();
+        this.requestQuota();
         break;
 
       case 'session_reconnected':
@@ -255,6 +256,7 @@ const Chat = {
         this.hideStopButton();
         if (msg.type === 'done') this.enableInput();
         this._notify('Copilot', 'Response ready');
+        this.requestQuota();
         break;
 
       case 'models':
@@ -681,7 +683,19 @@ const Chat = {
     if (!models || !Array.isArray(models) || models.length === 0) return;
 
     const currentValue = select.value;
+    // Also check saved model from localStorage for initial load
+    let savedModel = currentValue;
+    if (!savedModel) {
+      try {
+        const raw = localStorage.getItem(this._storageKey);
+        if (raw) {
+          const s = JSON.parse(raw);
+          if (s.model) savedModel = s.model;
+        }
+      } catch { /* ignore */ }
+    }
     select.innerHTML = '';
+    select.disabled = false;
     this.modelsMap.clear();
 
     models.forEach((model) => {
@@ -696,14 +710,10 @@ const Chat = {
       const opt = document.createElement('option');
       opt.value = id;
 
-      // Build display label with capability hints
+      // Build display label — always show billing multiplier
       let label = id;
-      if (typeof model === 'object') {
-        const hints = [];
-        if (model.capabilities?.supports?.vision) hints.push('👁');
-        if (model.capabilities?.supports?.reasoningEffort) hints.push('🧠');
-        if (model.billing?.multiplier && model.billing.multiplier > 1) hints.push(model.billing.multiplier + '×');
-        if (hints.length > 0) label += ' ' + hints.join('');
+      if (typeof model === 'object' && model.billing?.multiplier != null) {
+        label += ' · ' + model.billing.multiplier + '×';
       }
       opt.textContent = label;
 
@@ -723,8 +733,8 @@ const Chat = {
       select.appendChild(opt);
     });
 
-    if ([...select.options].some((o) => o.value === currentValue)) {
-      select.value = currentValue;
+    if ([...select.options].some((o) => o.value === savedModel)) {
+      select.value = savedModel;
     }
 
     // Update env line
@@ -869,11 +879,16 @@ const Chat = {
   enableInput() {
     const input = document.getElementById('message-input');
     input.disabled = false;
+    input.placeholder = 'Ask Copilot…';
     input.focus();
   },
 
   disableInput() {
-    document.getElementById('message-input').disabled = true;
+    const input = document.getElementById('message-input');
+    input.disabled = true;
+    if (!this.sessionReady) {
+      input.placeholder = 'Initializing session…';
+    }
   },
 
   initViewportHandler() {
@@ -1194,34 +1209,63 @@ const Chat = {
   },
 
   // --- Quota management ---
+  requestQuota() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ type: 'get_quota' }));
+  },
+
   handleQuota(data) {
     const container = document.getElementById('settings-quota-content');
-    if (!container) return;
+    
+    // SDK returns quotaSnapshots with keys like 'chat', 'premium_interactions'
+    const snapshots = data.quotaSnapshots || {};
+    const chat = snapshots.chat || data.chat;
+    const premium = snapshots.premium_interactions;
 
-    container.innerHTML = '';
+    if (chat || premium) {
+      // Determine usage percentage from chat quota
+      let percentUsed = 0;
+      let resetDate = null;
+      if (chat) {
+        percentUsed = chat.remainingPercentage != null ? (100 - chat.remainingPercentage) : (chat.percentageUsed ?? 0);
+        resetDate = chat.resetDate;
+      }
+      const remaining = 100 - percentUsed;
+      const colorClass = percentUsed > 80 ? 'quota-red' : percentUsed > 50 ? 'quota-yellow' : 'quota-green';
 
-    if (data.chat) {
-      const quota = data.chat;
-      const used = quota.percentageUsed ?? 0;
-      const remaining = 100 - used;
-      const colorClass = used > 80 ? 'quota-red' : used > 50 ? 'quota-yellow' : 'quota-green';
+      if (container) {
+        let html =
+          '<div class="quota-label">Chat quota</div>' +
+          '<div class="quota-bar-container">' +
+          '<div class="quota-bar ' + colorClass + '" style="width: ' + Math.min(percentUsed, 100) + '%"></div>' +
+          '</div>' +
+          '<div class="quota-text">' + Math.round(remaining) + '% remaining' +
+          (resetDate ? ' · resets ' + new Date(resetDate).toLocaleDateString() : '') +
+          '</div>';
 
-      container.innerHTML =
-        '<div class="quota-label">Chat quota</div>' +
-        '<div class="quota-bar-container">' +
-        '<div class="quota-bar ' + colorClass + '" style="width: ' + Math.min(used, 100) + '%"></div>' +
-        '</div>' +
-        '<div class="quota-text">' + Math.round(remaining) + '% remaining' +
-        (quota.resetDate ? ' · resets ' + new Date(quota.resetDate).toLocaleDateString() : '') +
-        '</div>';
+        // Show premium request consumption
+        if (premium) {
+          const premUsed = premium.usedRequests ?? 0;
+          const premTotal = premium.entitlementRequests ?? 0;
+          const premOverage = premium.overage ?? 0;
+          html += '<div class="quota-label" style="margin-top:var(--sp-2)">Premium requests</div>' +
+            '<div class="quota-text">' + premUsed + ' / ' + premTotal + ' used' +
+            (premOverage > 0 ? ' · ' + premOverage + ' overage' : '') +
+            '</div>';
+        } else if (chat && chat.usedRequests != null) {
+          html += '<div class="quota-text">' + chat.usedRequests + ' / ' + (chat.entitlementRequests ?? '?') + ' requests used</div>';
+        }
 
-      this.updateQuotaIndicator(used);
-    } else {
+        container.innerHTML = html;
+      }
+
+      this.updateQuotaIndicator(percentUsed, premium || chat);
+    } else if (container) {
       container.innerHTML = '<div class="settings-hint">Quota info not available</div>';
     }
   },
 
-  updateQuotaIndicator(percentUsed) {
+  updateQuotaIndicator(percentUsed, quotaSnapshot) {
     const el = document.getElementById('quota-indicator');
     if (!el) return;
     el.style.display = '';
@@ -1233,13 +1277,21 @@ const Chat = {
     } else {
       el.classList.add('quota-green');
     }
+    // Show request count as tooltip
+    if (quotaSnapshot && quotaSnapshot.usedRequests != null && quotaSnapshot.entitlementRequests != null) {
+      el.title = quotaSnapshot.usedRequests + '/' + quotaSnapshot.entitlementRequests + ' requests used';
+    } else {
+      el.title = Math.round(100 - percentUsed) + '% quota remaining';
+    }
   },
 
   // --- Session history ---
   handleSessionsList(sessions) {
-    const container = document.getElementById('settings-sessions-list');
+    const container = document.getElementById('sessions-list');
+    const loading = document.getElementById('sessions-loading');
     if (!container) return;
 
+    if (loading) loading.style.display = 'none';
     container.innerHTML = '';
     if (!sessions || sessions.length === 0) {
       container.innerHTML = '<div class="settings-hint">No previous sessions</div>';
@@ -1266,7 +1318,7 @@ const Chat = {
         const messagesEl = document.getElementById('messages');
         messagesEl.innerHTML = '';
         this.ws.send(JSON.stringify({ type: 'resume_session', sessionId: session.id }));
-        document.getElementById('settings-overlay').style.display = 'none';
+        document.getElementById('sessions-overlay').style.display = 'none';
       });
 
       container.appendChild(el);

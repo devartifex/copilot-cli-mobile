@@ -322,6 +322,11 @@ export function createChatStore(wsStore: WsStore): ChatStore {
         addInfoMessage(`Session resumed: ${msg.sessionId}`);
         break;
 
+      case 'session_deleted':
+        sessions = sessions.filter((s) => s.id !== msg.sessionId);
+        addInfoMessage('Session deleted');
+        break;
+
       case 'plan':
         plan = {
           exists: msg.exists,

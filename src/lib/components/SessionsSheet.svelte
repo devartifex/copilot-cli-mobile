@@ -6,9 +6,10 @@
     sessions: SessionSummary[];
     onClose: () => void;
     onResume: (sessionId: string) => void;
+    onDelete?: (sessionId: string) => void;
   }
 
-  const { open, sessions, onClose, onResume }: Props = $props();
+  const { open, sessions, onClose, onResume, onDelete }: Props = $props();
 
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) {
@@ -20,6 +21,13 @@
     const confirmed = window.confirm('Resume this session? Current conversation will end.');
     if (confirmed) {
       onResume(sessionId);
+    }
+  }
+
+  function handleDelete(e: MouseEvent, sessionId: string, title: string) {
+    e.stopPropagation();
+    if (window.confirm(`Delete session "${title}"? This cannot be undone.`)) {
+      onDelete?.(sessionId);
     }
   }
 
@@ -67,15 +75,22 @@
           {#each sessions as session (session.id)}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="session-item" onclick={() => handleResume(session.id)}>
-              <div class="session-item-title">
-                {session.title ?? session.id}
-              </div>
-              <div class="session-item-meta">
-                {#if session.model}
-                  <span>{session.model}</span>
-                {/if}
-                {#if session.updatedAt}
-                  <span>{formatRelativeTime(session.updatedAt)}</span>
+              <div class="session-item-row">
+                <div class="session-item-info">
+                  <div class="session-item-title">
+                    {session.title ?? session.id}
+                  </div>
+                  <div class="session-item-meta">
+                    {#if session.model}
+                      <span>{session.model}</span>
+                    {/if}
+                    {#if session.updatedAt}
+                      <span>{formatRelativeTime(session.updatedAt)}</span>
+                    {/if}
+                  </div>
+                </div>
+                {#if onDelete}
+                  <button class="session-delete-btn" onclick={(e) => handleDelete(e, session.id, session.title ?? 'Untitled')}>✕</button>
                 {/if}
               </div>
             </div>
@@ -154,6 +169,15 @@
   .session-item:active {
     background: var(--bg-overlay);
   }
+  .session-item-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+  .session-item-info {
+    flex: 1;
+    min-width: 0;
+  }
   .session-item-title {
     font-size: 0.85em;
     color: var(--fg);
@@ -167,6 +191,26 @@
     font-size: 0.72em;
     color: var(--fg-dim);
     margin-top: 2px;
+  }
+  .session-delete-btn {
+    background: none;
+    border: none;
+    color: var(--fg-dim);
+    font-size: 0.9em;
+    cursor: pointer;
+    padding: var(--sp-1);
+    border-radius: var(--radius-sm);
+    min-width: 28px;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+  }
+  .session-delete-btn:active {
+    color: var(--red);
+    background: rgba(248, 81, 73, 0.1);
   }
   .sessions-empty {
     font-family: var(--font-mono);

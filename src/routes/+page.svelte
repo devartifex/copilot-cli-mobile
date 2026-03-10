@@ -231,6 +231,7 @@
       sessions={chatStore.sessions}
       onClose={() => sessionsOpen = false}
       onResume={handleResumeSession}
+      onDelete={(id) => wsStore.deleteSession(id)}
     />
   </div>
 {:else}

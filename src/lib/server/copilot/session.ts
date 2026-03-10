@@ -3,12 +3,19 @@ import type { SessionConfig } from '@github/copilot-sdk';
 
 type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh';
 
+export interface InfiniteSessionsConfig {
+  enabled: boolean;
+  backgroundCompactionThreshold?: number;
+  bufferExhaustionThreshold?: number;
+}
+
 export interface CreateSessionOptions {
   model?: string;
   reasoningEffort?: ReasoningEffort;
   customInstructions?: string;
   excludedTools?: string[];
   availableTools?: string[];
+  infiniteSessions?: InfiniteSessionsConfig;
   onUserInputRequest?: SessionConfig['onUserInputRequest'];
 }
 
@@ -55,6 +62,18 @@ export async function createCopilotSession(
 
   if (options.onUserInputRequest) {
     sessionConfig.onUserInputRequest = options.onUserInputRequest;
+  }
+
+  if (options.infiniteSessions) {
+    sessionConfig.infiniteSessions = {
+      enabled: options.infiniteSessions.enabled,
+      ...(options.infiniteSessions.backgroundCompactionThreshold != null && {
+        backgroundCompactionThreshold: options.infiniteSessions.backgroundCompactionThreshold,
+      }),
+      ...(options.infiniteSessions.bufferExhaustionThreshold != null && {
+        bufferExhaustionThreshold: options.infiniteSessions.bufferExhaustionThreshold,
+      }),
+    };
   }
 
   return client.createSession(sessionConfig);

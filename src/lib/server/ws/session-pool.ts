@@ -33,7 +33,7 @@ export async function destroyPoolEntry(entry: PoolEntry): Promise<void> {
     entry.ttlTimer = null;
   }
   if (entry.session) {
-    try { await entry.session.destroy(); } catch { /* ignore */ }
+    try { await entry.session.disconnect(); } catch { /* ignore */ }
     entry.session = null;
   }
   entry.userInputResolve = null;

@@ -223,6 +223,11 @@ export interface SessionResumedMessage {
   sessionId: string;
 }
 
+export interface SessionDeletedMessage {
+  type: 'session_deleted';
+  sessionId: string;
+}
+
 export interface PlanMessage {
   type: 'plan';
   exists: boolean;
@@ -357,6 +362,7 @@ export type ServerMessage =
   | QuotaMessage
   | SessionsMessage
   | SessionResumedMessage
+  | SessionDeletedMessage
   | PlanMessage
   | PlanChangedMessage
   | PlanUpdatedMessage
@@ -457,6 +463,11 @@ export interface ResumeSessionMessage {
   sessionId: string;
 }
 
+export interface DeleteSessionMessage {
+  type: 'delete_session';
+  sessionId: string;
+}
+
 export interface GetPlanMessage {
   type: 'get_plan';
 }
@@ -487,6 +498,7 @@ export type ClientMessage =
   | CompactMessage
   | ListSessionsMessage
   | ResumeSessionMessage
+  | DeleteSessionMessage
   | GetPlanMessage
   | UpdatePlanMessage
   | DeletePlanMessage;

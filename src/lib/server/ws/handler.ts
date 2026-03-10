@@ -18,7 +18,7 @@ const VALID_MESSAGE_TYPES = new Set([
   'abort', 'set_model', 'set_reasoning', 'user_input_response',
   'list_tools', 'list_agents', 'select_agent', 'deselect_agent',
   'get_quota', 'compact', 'list_sessions', 'resume_session',
-  'get_plan', 'update_plan', 'delete_plan',
+  'delete_session', 'get_plan', 'update_plan', 'delete_plan',
 ]);
 const VALID_MODES = new Set(['interactive', 'plan', 'autopilot']);
 const VALID_REASONING = new Set(['low', 'medium', 'high', 'xhigh']);
@@ -264,7 +264,7 @@ export function setupWebSocket(
         switch (msg.type) {
           case 'new_session': {
             if (connectionEntry.session) {
-              try { await connectionEntry.session.destroy(); } catch { /* ignore */ }
+              try { await connectionEntry.session.disconnect(); } catch { /* ignore */ }
               connectionEntry.session = null;
             }
             connectionEntry.userInputResolve = null;
@@ -278,11 +278,24 @@ export function setupWebSocket(
                 ? msg.excludedTools.filter((t: unknown) => typeof t === 'string')
                 : undefined;
 
+              const infiniteSessions = msg.infiniteSessions && typeof msg.infiniteSessions === 'object'
+                ? {
+                    enabled: msg.infiniteSessions.enabled !== false,
+                    ...(typeof msg.infiniteSessions.backgroundCompactionThreshold === 'number' && {
+                      backgroundCompactionThreshold: Math.max(0, Math.min(1, msg.infiniteSessions.backgroundCompactionThreshold)),
+                    }),
+                    ...(typeof msg.infiniteSessions.bufferExhaustionThreshold === 'number' && {
+                      bufferExhaustionThreshold: Math.max(0, Math.min(1, msg.infiniteSessions.bufferExhaustionThreshold)),
+                    }),
+                  }
+                : undefined;
+
               connectionEntry.session = await createCopilotSession(connectionEntry.client, githubToken, {
                 model: msg.model,
                 reasoningEffort: msg.reasoningEffort,
                 customInstructions,
                 excludedTools,
+                infiniteSessions,
                 onUserInputRequest: makeUserInputHandler(connectionEntry),
               });
 
@@ -518,6 +531,29 @@ export function setupWebSocket(
             break;
           }
 
+          case 'delete_session': {
+            const deleteId = typeof msg.sessionId === 'string' ? msg.sessionId.trim() : '';
+            if (!deleteId) {
+              poolSend(connectionEntry, { type: 'error', message: 'Session ID is required' });
+              return;
+            }
+
+            // Prevent deleting the active session
+            if (connectionEntry.session?.sessionId === deleteId) {
+              poolSend(connectionEntry, { type: 'error', message: 'Cannot delete the active session' });
+              return;
+            }
+
+            try {
+              await connectionEntry.client.deleteSession(deleteId);
+              poolSend(connectionEntry, { type: 'session_deleted', sessionId: deleteId });
+            } catch (err: any) {
+              console.error('Delete session error:', err.message);
+              poolSend(connectionEntry, { type: 'error', message: `Failed to delete session: ${err.message}` });
+            }
+            break;
+          }
+
           case 'resume_session': {
             const sessionId = typeof msg.sessionId === 'string' ? msg.sessionId.trim() : '';
             if (!sessionId) {
@@ -526,7 +562,7 @@ export function setupWebSocket(
             }
 
             if (connectionEntry.session) {
-              try { await connectionEntry.session.destroy(); } catch { /* ignore */ }
+              try { await connectionEntry.session.disconnect(); } catch { /* ignore */ }
               connectionEntry.session = null;
             }
             connectionEntry.userInputResolve = null;

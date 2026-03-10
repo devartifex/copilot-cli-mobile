@@ -49,9 +49,9 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
-    "@types/dompurify": "^3.0.5",
+    "@types/dompurify": "^3.2.0",
     "@types/express-session": "^1.18.0",
-    "@types/node": "^20.17.0",
+    "@types/node": "^25.4.0",
     "@types/session-file-store": "^1.2.6",
     "@types/ws": "^8.5.13",
     "svelte-check": "^4.4.5",

@@ -1,3 +1,5 @@
+@import 'highlight.js/styles/github-dark.css';
+
 /* Global reset and design tokens — extracted from public/css/style.css */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 

@@ -4,16 +4,16 @@
   "description": "Copilot CLI Mobile — GitHub OAuth + Copilot SDK",
   "main": "build/index.js",
   "scripts": {
-    "dev": "vite dev",
-    "dev:docker": "docker compose up --build",
     "build": "vite build",
-    "preview": "vite preview",
     "start": "node build/index.js",
+    "dev": "vite dev",
+    "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "lint": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "dev:docker": "docker compose up --build",
+    "dev:down": "docker compose down",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",
-    "clean": "rm -rf build dist .svelte-kit",
+    "clean": "rm -rf build .svelte-kit",
     "postinstall": "node scripts/patch-sdk.mjs"
   },
   "keywords": [

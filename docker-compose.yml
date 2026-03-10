@@ -10,5 +10,8 @@ services:
       - BASE_URL=http://localhost:3000
       - SESSION_STORE_PATH=/tmp/.sessions
     volumes:
+      - ./src:/app/src:ro
       - ./static:/app/static:ro
+      - ./svelte.config.js:/app/svelte.config.js:ro
+      - ./vite.config.ts:/app/vite.config.ts:ro
     restart: unless-stopped

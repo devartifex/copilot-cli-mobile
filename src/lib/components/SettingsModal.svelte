@@ -357,11 +357,10 @@
   .settings-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--bg);
     z-index: 100;
     display: flex;
-    align-items: flex-end;
-    justify-content: center;
+    flex-direction: column;
     animation: fadeIn 0.15s ease;
   }
   @keyframes fadeIn {
@@ -369,27 +368,23 @@
     to { opacity: 1; }
   }
   .settings-panel {
-    background: var(--bg-raised);
-    border: 1px solid var(--border);
-    border-bottom: none;
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    background: var(--bg);
     width: 100%;
-    max-width: 480px;
-    max-height: 70vh;
+    max-width: 600px;
+    margin: 0 auto;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    animation: slideUp 0.2s ease;
-  }
-  @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
+    min-height: 0;
   }
   .settings-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--sp-4);
+    padding: var(--sp-3) var(--sp-4);
+    padding-top: calc(var(--sp-3) + var(--safe-top));
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
   .settings-title {
     font-family: var(--font-mono);
@@ -407,20 +402,13 @@
   }
   .settings-body {
     padding: var(--sp-4);
+    padding-bottom: calc(var(--sp-4) + var(--safe-bottom));
     overflow-y: auto;
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
-  }
-
-  @media (min-width: 768px) {
-    .settings-overlay { align-items: center; }
-    .settings-panel {
-      border-radius: var(--radius-md);
-      border-bottom: 1px solid var(--border);
-      max-height: 60vh;
-    }
+    min-height: 0;
   }
 
   /* Accordion */

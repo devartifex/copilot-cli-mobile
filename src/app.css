@@ -41,6 +41,26 @@
   --radius-lg: 14px;
 }
 
+/* ── Thin modern scrollbars ───────────────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-dim);
+}
+
 html, body {
   height: 100%;
   background: var(--bg);

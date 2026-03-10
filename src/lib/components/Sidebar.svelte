@@ -85,18 +85,21 @@
   .sidebar-panel {
     position: fixed;
     top: 0;
-    right: 0;
+    left: 0;
     bottom: 0;
     width: min(280px, 80vw);
     background: var(--bg-raised);
-    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
     z-index: 91;
     display: flex;
     flex-direction: column;
-    transform: translateX(0);
-    transition: transform 0.25s ease;
+    animation: slideInLeft 0.2s ease;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
+  }
+  @keyframes slideInLeft {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
   }
   .sidebar-header {
     display: flex;

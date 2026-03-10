@@ -57,10 +57,6 @@
   <div class="sheet-overlay" role="presentation" onclick={handleBackdropClick}>
     <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
     <div class="sheet-panel" role="presentation" onclick={(e: MouseEvent) => e.stopPropagation()}>
-      <div class="sheet-handle-row">
-        <div class="sheet-handle"></div>
-      </div>
-
       <div class="sheet-header">
         <span class="sheet-title">Models</span>
         <button class="sheet-close" onclick={onClose}>✕</button>
@@ -116,52 +112,35 @@
     position: fixed;
     inset: 0;
     z-index: 95;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(2px);
+    background: var(--bg);
     display: flex;
-    align-items: flex-end;
-    justify-content: center;
+    flex-direction: column;
+    animation: fadeIn 0.15s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   .sheet-panel {
     width: 100%;
-    max-width: 480px;
-    max-height: 60vh;
-    background: var(--bg-raised);
-    border-top-left-radius: var(--radius-lg);
-    border-top-right-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-    border-bottom: none;
+    max-width: 600px;
+    margin: 0 auto;
+    background: var(--bg);
     display: flex;
     flex-direction: column;
-    animation: slideUp 0.2s ease;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-  }
-
-  .sheet-handle-row {
-    display: flex;
-    justify-content: center;
-    padding: var(--sp-2) 0 0;
-  }
-
-  .sheet-handle {
-    width: 36px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--fg-dim);
-    opacity: 0.4;
+    flex: 1;
+    min-height: 0;
   }
 
   .sheet-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--sp-2) var(--sp-4);
+    padding: var(--sp-3) var(--sp-4);
+    padding-top: calc(var(--sp-3) + var(--safe-top));
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
 
   .sheet-title {
@@ -194,7 +173,15 @@
     flex: 1;
     overflow-y: auto;
     padding: 0 var(--sp-4) var(--sp-3);
+    padding-bottom: calc(var(--sp-3) + var(--safe-bottom));
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    min-height: 0;
   }
+  .sheet-body::-webkit-scrollbar { width: 4px; }
+  .sheet-body::-webkit-scrollbar-track { background: transparent; }
+  .sheet-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .sheet-body::-webkit-scrollbar-thumb:hover { background: var(--fg-dim); }
 
   /* ── Model list ────────────────────────────────────────────────── */
   .model-list {

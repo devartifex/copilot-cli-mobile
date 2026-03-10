@@ -29,8 +29,10 @@
   let inputValue = $state('');
   let textareaEl: HTMLTextAreaElement | undefined = $state();
   let fileInputEl: HTMLInputElement | undefined = $state();
+  let cameraInputEl: HTMLInputElement | undefined = $state();
   let selectedFiles = $state<File[]>([]);
   let isUploading = $state(false);
+  let attachMenuOpen = $state(false);
 
   const isDisabled = $derived(
     connectionState !== 'connected' || isStreaming || !sessionReady || isUploading,
@@ -63,7 +65,32 @@
   }
 
   function handleFileSelect() {
+    attachMenuOpen = false;
     fileInputEl?.click();
+  }
+
+  function handleCameraCapture() {
+    attachMenuOpen = false;
+    cameraInputEl?.click();
+  }
+
+  function handleGallerySelect() {
+    attachMenuOpen = false;
+    // Use file input with image accept for gallery
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = 'image/*,video/*';
+    input.onchange = (e) => handleFilesChanged(e);
+    input.click();
+  }
+
+  function toggleAttachMenu() {
+    attachMenuOpen = !attachMenuOpen;
+  }
+
+  function closeAttachMenu() {
+    attachMenuOpen = false;
   }
 
   function handleFilesChanged(event: Event) {
@@ -193,17 +220,61 @@
         aria-hidden="true"
         tabindex={-1}
       />
-      <button
-        class="circle-btn attach-btn"
-        onclick={handleFileSelect}
-        disabled={isDisabled || selectedFiles.length >= MAX_FILES}
-        aria-label="Attach files"
-      >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-          <line x1="9" y1="4" x2="9" y2="14"/>
-          <line x1="4" y1="9" x2="14" y2="9"/>
-        </svg>
-      </button>
+      <input
+        bind:this={cameraInputEl}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onchange={handleFilesChanged}
+        class="file-input-hidden"
+        aria-hidden="true"
+        tabindex={-1}
+      />
+
+      <div class="attach-wrapper">
+        <button
+          class="circle-btn attach-btn"
+          onclick={toggleAttachMenu}
+          disabled={isDisabled || selectedFiles.length >= MAX_FILES}
+          aria-label="Attach"
+          aria-expanded={attachMenuOpen}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <line x1="9" y1="4" x2="9" y2="14"/>
+            <line x1="4" y1="9" x2="14" y2="9"/>
+          </svg>
+        </button>
+
+        {#if attachMenuOpen}
+          <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+          <div class="attach-backdrop" onclick={closeAttachMenu}></div>
+          <div class="attach-menu" role="menu">
+            <button class="attach-menu-item" role="menuitem" onclick={handleCameraCapture}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="4" width="14" height="10" rx="2"/>
+                <circle cx="8" cy="9" r="2.5"/>
+                <path d="M5.5 4 L6.5 2 L9.5 2 L10.5 4"/>
+              </svg>
+              Camera
+            </button>
+            <button class="attach-menu-item" role="menuitem" onclick={handleGallerySelect}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="2" width="14" height="12" rx="2"/>
+                <circle cx="5" cy="6" r="1.5"/>
+                <path d="M1 12 L5 8 L8 11 L11 7 L15 12"/>
+              </svg>
+              Gallery
+            </button>
+            <button class="attach-menu-item" role="menuitem" onclick={handleFileSelect}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 1 L3 1 C2.4 1 2 1.4 2 2 L2 14 C2 14.6 2.4 15 3 15 L13 15 C13.6 15 14 14.6 14 14 L14 6 Z"/>
+                <path d="M9 1 L9 6 L14 6"/>
+              </svg>
+              File
+            </button>
+          </div>
+        {/if}
+      </div>
 
       <textarea
         bind:this={textareaEl}
@@ -333,6 +404,62 @@
   .attach-btn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+  }
+
+  /* ── Attach menu ───────────────────────────────────────────────── */
+  .attach-wrapper {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .attach-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+  }
+
+  .attach-menu {
+    position: absolute;
+    bottom: calc(100% + var(--sp-2));
+    left: 0;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    z-index: 11;
+    min-width: 160px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    animation: menuFadeIn 0.12s ease;
+  }
+
+  @keyframes menuFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .attach-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--fg);
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    padding: var(--sp-2) var(--sp-3);
+    cursor: pointer;
+    min-height: 44px;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .attach-menu-item:active {
+    background: var(--border);
+  }
+
+  .attach-menu-item + .attach-menu-item {
+    border-top: 1px solid var(--border);
   }
 
   /* Send */

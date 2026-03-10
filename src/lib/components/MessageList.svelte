@@ -112,18 +112,14 @@
     scroll-padding-bottom: 80px;
   }
 
-  .messages::-webkit-scrollbar {
-    width: 4px;
+  .messages {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
   }
-
-  .messages::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .messages::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 2px;
-  }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .messages::-webkit-scrollbar-thumb:hover { background: var(--fg-dim); }
 
   /* ── streaming assistant message ───────────────────────────────────────── */
   .message.assistant {

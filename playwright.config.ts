@@ -26,7 +26,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx tsx src/index.ts',
+    command: 'npm run build && node build/index.js',
     port: 3001,
     reuseExistingServer: !process.env.CI,
     env: {

@@ -1,15 +1,12 @@
 <script lang="ts">
-  import type { ConnectionState, SessionMode, FileAttachment } from '$lib/types/index.js';
+  import type { ConnectionState, FileAttachment } from '$lib/types/index.js';
 
   interface Props {
     connectionState: ConnectionState;
     sessionReady: boolean;
     isStreaming: boolean;
-    mode: SessionMode;
-    currentModel: string;
     onSend: (content: string, attachments?: Array<{ path: string; name: string; type: string }>) => void;
     onAbort: () => void;
-    onToggleSidebar: () => void;
   }
 
   const MAX_LENGTH = 10_000;
@@ -25,11 +22,8 @@
     connectionState,
     sessionReady,
     isStreaming,
-    mode,
-    currentModel,
     onSend,
     onAbort,
-    onToggleSidebar,
   }: Props = $props();
 
   let inputValue = $state('');
@@ -42,25 +36,9 @@
     connectionState !== 'connected' || isStreaming || !sessionReady || isUploading,
   );
 
-  const statusClass = $derived.by(() => {
-    if (connectionState === 'connecting') return 'connecting';
-    if (connectionState === 'connected') return 'connected';
-    return 'disconnected';
-  });
-
-  const statusText = $derived.by(() => {
-    if (isUploading) return 'Uploading…';
-    switch (connectionState) {
-      case 'connecting':
-        return 'Connecting…';
-      case 'connected':
-        return isStreaming ? 'Streaming…' : sessionReady ? 'Ready' : 'Starting session…';
-      case 'disconnected':
-        return 'Disconnected';
-      case 'error':
-        return 'Connection error';
-    }
-  });
+  const canSend = $derived(
+    !isDisabled && (inputValue.trim().length > 0 || selectedFiles.length > 0),
+  );
 
   const placeholder = $derived.by(() => {
     if (connectionState === 'connecting') return 'Connecting…';
@@ -204,8 +182,29 @@
       </div>
     {/if}
 
-    <div class="prompt-line">
-      <span class="term-prompt {statusClass}" data-mode={mode}>❯</span>
+    <div class="prompt-row">
+      <input
+        bind:this={fileInputEl}
+        type="file"
+        multiple
+        accept={ACCEPTED_EXTENSIONS.join(',')}
+        onchange={handleFilesChanged}
+        class="file-input-hidden"
+        aria-hidden="true"
+        tabindex={-1}
+      />
+      <button
+        class="circle-btn attach-btn"
+        onclick={handleFileSelect}
+        disabled={isDisabled || selectedFiles.length >= MAX_FILES}
+        aria-label="Attach files"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <line x1="9" y1="4" x2="9" y2="14"/>
+          <line x1="4" y1="9" x2="14" y2="9"/>
+        </svg>
+      </button>
+
       <textarea
         bind:this={textareaEl}
         bind:value={inputValue}
@@ -216,39 +215,26 @@
         oninput={handleInput}
         onkeydown={handleKeydown}
       ></textarea>
-    </div>
-    <div class="status-bar">
-      <div class="status-left">
-        <span class="status-text">{statusText}</span>
-      </div>
-      <div class="status-right">
-        {#if isStreaming}
-          <button class="action-btn stop-btn" onclick={onAbort}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="1.5"/></svg>
-            Stop
-          </button>
-        {/if}
-        <input
-          bind:this={fileInputEl}
-          type="file"
-          multiple
-          accept={ACCEPTED_EXTENSIONS.join(',')}
-          onchange={handleFilesChanged}
-          class="file-input-hidden"
-          aria-hidden="true"
-          tabindex={-1}
-        />
-        <button
-          class="action-btn attach-btn"
-          onclick={handleFileSelect}
-          disabled={isDisabled || selectedFiles.length >= MAX_FILES}
-          aria-label="Attach files"
-        ><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 7.5l-5.8 5.8a3.2 3.2 0 0 1-4.5-4.5l5.8-5.8a2.1 2.1 0 0 1 3 3L6.2 11.8a1.1 1.1 0 0 1-1.5-1.5L10 5"/></svg></button>
-        <span class="model-label">{currentModel}</span>
-        <button class="sidebar-toggle-btn" onclick={onToggleSidebar} aria-label="Open menu">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="5" x2="15" y2="5"/><line x1="3" y1="9" x2="15" y2="9"/><line x1="3" y1="13" x2="15" y2="13"/></svg>
+
+      {#if isStreaming}
+        <button class="circle-btn stop-btn" onclick={onAbort} aria-label="Stop generating">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+            <rect x="2" y="2" width="10" height="10" rx="2"/>
+          </svg>
         </button>
-      </div>
+      {:else}
+        <button
+          class="circle-btn send-btn"
+          onclick={send}
+          disabled={!canSend}
+          aria-label="Send message"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 12 L8 4"/>
+            <path d="M4 7 L8 3 L12 7"/>
+          </svg>
+        </button>
+      {/if}
     </div>
   </div>
 </div>
@@ -263,73 +249,41 @@
   }
 
   .input-container {
-    padding: var(--sp-3) 0 0;
+    padding: var(--sp-2) 0 var(--sp-2);
   }
 
-  .prompt-line {
+  /* ── Prompt row: [ + attach ] [ textarea ] [ send/stop ] ─────── */
+  .prompt-row {
     display: flex;
-    align-items: center;
-    gap: var(--sp-1);
-  }
-
-  .prompt-line .term-prompt {
-    line-height: 1;
-    font-size: 1.1em;
-    font-weight: 700;
-    flex-shrink: 0;
-    transition: color 0.2s ease;
-  }
-
-  .prompt-line .term-prompt.connected[data-mode='interactive'] {
-    color: #e6edf3;
-  }
-
-  .prompt-line .term-prompt.connected[data-mode='plan'] {
-    color: var(--blue);
-  }
-
-  .prompt-line .term-prompt.connected[data-mode='autopilot'] {
-    color: var(--green);
-  }
-
-  .prompt-line .term-prompt.disconnected {
-    color: var(--red);
-  }
-
-  .prompt-line .term-prompt.connecting {
-    color: var(--yellow);
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.3;
-    }
+    align-items: flex-end;
+    gap: var(--sp-2);
   }
 
   textarea {
     flex: 1;
-    background: none;
-    border: none;
+    background: var(--bg-overlay);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     color: var(--fg);
     font-size: max(16px, var(--font-size));
     font-family: var(--font-mono);
     resize: none;
     outline: none;
-    max-height: 100px;
+    max-height: 120px;
     line-height: 1.5;
-    padding: 2px 0;
+    padding: var(--sp-2) var(--sp-3);
     -webkit-appearance: none;
     appearance: none;
+    min-height: 40px;
+  }
+
+  textarea:focus {
+    border-color: var(--purple-dim);
   }
 
   textarea::placeholder {
     color: var(--fg-dim);
-    font-size: 0.85em;
+    font-size: 0.88em;
   }
 
   textarea:disabled {
@@ -341,103 +295,74 @@
   }
 
   @keyframes inputLoading {
-    0%,
-    100% {
-      opacity: 0.4;
-    }
-    50% {
-      opacity: 0.8;
-    }
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
   }
 
-  .status-bar {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    margin-top: var(--sp-2);
-    padding: var(--sp-2) 0;
-    font-size: 0.82em;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .status-bar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .status-left {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    flex-shrink: 0;
-    min-width: 0;
-    color: var(--fg-dim);
-  }
-
-  .status-right {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    flex-shrink: 0;
-    margin-left: auto;
-  }
-
-  .model-label {
-    color: var(--fg-dim);
-    font-family: var(--font-mono);
-    font-size: 0.85em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 120px;
-  }
-
-  .sidebar-toggle-btn {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--fg-muted);
-    padding: 0;
-    border-radius: var(--radius-sm);
+  /* ── Circle buttons (attach, send, stop) ───────────────────────── */
+  .circle-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
     cursor: pointer;
-    line-height: 1;
-    min-height: 32px;
-    min-width: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .sidebar-toggle-btn:active {
+  .circle-btn:active {
+    transform: scale(0.92);
+  }
+
+  /* Attach */
+  .attach-btn {
+    background: var(--bg-overlay);
+    color: var(--fg-muted);
+    border: 1px solid var(--border);
+  }
+
+  .attach-btn:active {
     background: var(--border);
     color: var(--fg);
   }
 
-  .action-btn {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    color: var(--fg-dim);
-    padding: var(--sp-1) var(--sp-2);
-    font-family: var(--font-mono);
-    font-size: 0.9em;
-    cursor: pointer;
-    white-space: nowrap;
-    min-height: 26px;
-    display: flex;
-    align-items: center;
-    gap: var(--sp-1);
+  .attach-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
   }
 
-  .action-btn.stop-btn {
-    color: var(--red);
-    border-color: var(--red);
-  }
-
-  .action-btn.stop-btn:active {
-    background: var(--red);
+  /* Send */
+  .send-btn {
+    background: var(--purple);
     color: var(--bg);
   }
 
+  .send-btn:disabled {
+    background: var(--bg-overlay);
+    color: var(--fg-dim);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .send-btn:not(:disabled):active {
+    background: var(--purple-dim);
+  }
+
+  /* Stop */
+  .stop-btn {
+    background: var(--red);
+    color: #fff;
+  }
+
+  .stop-btn:active {
+    opacity: 0.8;
+  }
+
+  /* ── Hidden file input ─────────────────────────────────────────── */
   .file-input-hidden {
     position: absolute;
     width: 0;
@@ -447,27 +372,12 @@
     pointer-events: none;
   }
 
-  .attach-btn {
-    font-size: 1em;
-    min-height: 32px;
-    min-width: 32px;
-    padding: var(--sp-1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-  }
-
-  .attach-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
-
+  /* ── File preview chips ────────────────────────────────────────── */
   .file-preview-row {
     display: flex;
     flex-wrap: wrap;
     gap: var(--sp-1);
-    padding: var(--sp-2) 0;
+    padding: 0 0 var(--sp-2);
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -480,7 +390,8 @@
     display: flex;
     align-items: center;
     gap: var(--sp-1);
-    background: var(--border);
+    background: var(--bg-overlay);
+    border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 2px var(--sp-2);
     font-size: 0.78em;

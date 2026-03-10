@@ -10,7 +10,8 @@
   import Sidebar from '$lib/components/Sidebar.svelte';
   import SettingsModal from '$lib/components/SettingsModal.svelte';
   import SessionsSheet from '$lib/components/SessionsSheet.svelte';
-  import QuotaDot from '$lib/components/QuotaDot.svelte';
+  import TopBar from '$lib/components/TopBar.svelte';
+  import ModelSheet from '$lib/components/ModelSheet.svelte';
   import { createWsStore } from '$lib/stores/ws.svelte.js';
   import { createChatStore } from '$lib/stores/chat.svelte.js';
   import { createSettingsStore } from '$lib/stores/settings.svelte.js';
@@ -27,6 +28,7 @@
   let sidebarOpen = $state(false);
   let settingsOpen = $state(false);
   let sessionsOpen = $state(false);
+  let modelSheetOpen = $state(false);
 
   const modelCount = $derived(chatStore.models.size);
   const toolCount = $derived(chatStore.tools.length);
@@ -163,6 +165,17 @@
 
 {#if data.authenticated}
   <div class="screen">
+    <TopBar
+      mode={chatStore.mode}
+      currentModel={chatStore.currentModel}
+      connectionState={wsStore.connectionState}
+      quotaSnapshots={chatStore.quotaSnapshots}
+      onToggleSidebar={() => sidebarOpen = true}
+      onSetMode={handleSetMode}
+      onOpenModelSheet={() => modelSheetOpen = true}
+      onNewChat={handleNewChat}
+    />
+
     <div class="terminal">
       {#if chatStore.plan.exists}
         <PlanPanel
@@ -206,29 +219,29 @@
         connectionState={wsStore.connectionState}
         sessionReady={wsStore.sessionReady}
         isStreaming={chatStore.isStreaming}
-        mode={chatStore.mode}
-        currentModel={chatStore.currentModel}
         onSend={handleSend}
         onAbort={() => wsStore.abort()}
-        onToggleSidebar={() => sidebarOpen = true}
       />
     </div>
 
     <Sidebar
       open={sidebarOpen}
-      mode={chatStore.mode}
-      models={chatStore.models}
-      currentModel={chatStore.currentModel}
-      reasoningEffort={chatStore.reasoningEffort}
       currentAgent={chatStore.currentAgent}
       onClose={() => sidebarOpen = false}
       onNewChat={handleNewChat}
       onOpenSessions={handleOpenSessions}
       onOpenSettings={handleOpenSettings}
-      onSetMode={handleSetMode}
+      onLogout={handleLogout}
+    />
+
+    <ModelSheet
+      open={modelSheetOpen}
+      models={chatStore.models}
+      currentModel={chatStore.currentModel}
+      reasoningEffort={chatStore.reasoningEffort}
       onSetModel={handleSetModel}
       onSetReasoning={handleSetReasoning}
-      onLogout={handleLogout}
+      onClose={() => modelSheetOpen = false}
     />
 
     <SettingsModal
@@ -284,7 +297,6 @@
     display: flex;
     flex-direction: column;
     padding: var(--sp-3) var(--sp-4);
-    padding-top: calc(var(--sp-3) + var(--safe-top));
     min-height: 0;
     overflow: hidden;
   }
@@ -292,7 +304,6 @@
   @media (min-width: 600px) {
     .terminal {
       padding: var(--sp-4) var(--sp-5);
-      padding-top: calc(var(--sp-4) + var(--safe-top));
     }
   }
 
@@ -301,7 +312,6 @@
       max-width: 800px;
       margin: 0 auto;
       padding: var(--sp-4) var(--sp-6);
-      padding-top: calc(var(--sp-4) + var(--safe-top));
       width: 100%;
     }
   }

@@ -12,7 +12,7 @@
       </div>
     </div>
     <div class="banner-sub">Describe a task to get started.</div>
-    <div class="banner-tip">Tip: Open the menu (☰) to switch modes.</div>
+    <div class="banner-tip">Switch modes or models from the top bar.</div>
     <div class="banner-warn">Copilot uses AI. Always verify suggestions.</div>
   </div>
 </div>

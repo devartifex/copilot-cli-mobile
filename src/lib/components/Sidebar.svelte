@@ -1,75 +1,28 @@
 <script lang="ts">
-  import type {
-    SessionMode,
-    ReasoningEffort,
-    ModelInfo,
-  } from '$lib/types/index.js';
-
   interface Props {
     open: boolean;
-    mode: SessionMode;
-    models: Map<string, ModelInfo>;
-    currentModel: string;
-    reasoningEffort: ReasoningEffort | null;
     currentAgent: string | null;
     onClose: () => void;
     onNewChat: () => void;
     onOpenSessions: () => void;
     onOpenSettings: () => void;
-    onSetMode: (mode: SessionMode) => void;
-    onSetModel: (model: string) => void;
-    onSetReasoning: (effort: ReasoningEffort) => void;
     onLogout: () => void;
   }
 
   const {
     open,
-    mode,
-    models,
-    currentModel,
-    reasoningEffort,
     currentAgent,
     onClose,
     onNewChat,
     onOpenSessions,
     onOpenSettings,
-    onSetMode,
-    onSetModel,
-    onSetReasoning,
     onLogout,
   }: Props = $props();
-
-  const modes: { value: SessionMode; label: string }[] = [
-    { value: 'interactive', label: 'Ask' },
-    { value: 'plan', label: 'Plan' },
-    { value: 'autopilot', label: 'Auto' },
-  ];
-
-  const reasoningLevels: { value: ReasoningEffort; label: string }[] = [
-    { value: 'low', label: 'low' },
-    { value: 'medium', label: 'med' },
-    { value: 'high', label: 'high' },
-    { value: 'xhigh', label: 'max' },
-  ];
-
-  const supportsReasoning = $derived(
-    models.get(currentModel)?.capabilities?.supports?.reasoningEffort === true,
-  );
 
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) {
       onClose();
     }
-  }
-
-  function formatMultiplier(info: ModelInfo): string {
-    const mult = info.billing?.multiplier;
-    return mult != null ? `${info.id} · ${mult}×` : info.id;
-  }
-
-  function handleModelChange(e: Event) {
-    const target = e.target as HTMLSelectElement;
-    onSetModel(target.value);
   }
 </script>
 
@@ -84,53 +37,6 @@
       </div>
 
       <div class="sidebar-body">
-        <!-- Mode section -->
-        <div class="sidebar-section">
-          <span class="sidebar-label">Mode</span>
-          <div class="mode-toggle">
-            {#each modes as m (m.value)}
-              <button
-                class="mode-opt"
-                class:active={mode === m.value}
-                data-mode={m.value}
-                onclick={() => onSetMode(m.value)}
-              >
-                {m.label}
-              </button>
-            {/each}
-          </div>
-        </div>
-
-        <!-- Model section -->
-        <div class="sidebar-section">
-          <span class="sidebar-label">Model</span>
-          <select class="sidebar-select" value={currentModel} onchange={handleModelChange}>
-            {#each [...models.values()] as info (info.id)}
-              <option value={info.id}>{formatMultiplier(info)}</option>
-            {/each}
-          </select>
-        </div>
-
-        <!-- Reasoning section (conditional) -->
-        {#if supportsReasoning}
-          <div class="sidebar-section">
-            <span class="sidebar-label">Reasoning</span>
-            <div class="reasoning-toggle">
-              {#each reasoningLevels as level (level.value)}
-                <button
-                  class="reasoning-opt"
-                  class:active={reasoningEffort === level.value}
-                  onclick={() => onSetReasoning(level.value)}
-                >
-                  {level.label}
-                </button>
-              {/each}
-            </div>
-          </div>
-        {/if}
-
-        <div class="sidebar-divider"></div>
-
         <!-- Actions section -->
         <div class="sidebar-section">
           <button class="sidebar-action" onclick={onNewChat}>
@@ -246,100 +152,6 @@
   .sidebar-divider {
     height: 1px;
     background: var(--border);
-  }
-
-  /* Mode toggle */
-  .mode-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    overflow: hidden;
-    width: 100%;
-  }
-  .mode-opt {
-    background: transparent;
-    border: none;
-    color: var(--fg-dim);
-    padding: var(--sp-1) var(--sp-2);
-    font-family: var(--font-mono);
-    font-size: 0.88em;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    white-space: nowrap;
-    min-height: 40px;
-    flex: 1;
-  }
-  .mode-opt.active {
-    background: var(--border-accent);
-    color: var(--purple);
-  }
-  .mode-opt[data-mode='interactive'].active {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e6edf3;
-  }
-  .mode-opt[data-mode='plan'].active {
-    background: rgba(88, 166, 255, 0.15);
-    color: var(--blue);
-  }
-  .mode-opt[data-mode='autopilot'].active {
-    background: rgba(63, 185, 80, 0.15);
-    color: var(--green);
-  }
-  .mode-opt:active {
-    transform: scale(0.96);
-  }
-
-  /* Model select */
-  .sidebar-select {
-    width: 100%;
-    background: var(--bg-overlay);
-    color: var(--fg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: var(--sp-2) var(--sp-3);
-    font-family: var(--font-mono);
-    font-size: 0.85em;
-    cursor: pointer;
-    min-height: 40px;
-  }
-  .sidebar-select:focus {
-    border-color: var(--purple);
-  }
-  .sidebar-select option {
-    background: var(--bg);
-  }
-
-  /* Reasoning toggle */
-  .reasoning-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    overflow: hidden;
-    width: 100%;
-  }
-  .reasoning-opt {
-    background: transparent;
-    border: none;
-    color: var(--fg-dim);
-    padding: var(--sp-1) var(--sp-2);
-    font-family: var(--font-mono);
-    font-size: 0.85em;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    white-space: nowrap;
-    min-height: 40px;
-    flex: 1;
-  }
-  .reasoning-opt.active {
-    background: rgba(240, 136, 62, 0.18);
-    color: var(--orange);
-  }
-  .reasoning-opt:active {
-    transform: scale(0.96);
   }
 
   /* Action buttons */

@@ -190,7 +190,12 @@ export function createChatStore(wsStore: WsStore): ChatStore {
       case 'tool_progress':
         messages = messages.map(m =>
           m.toolCallId === msg.toolCallId
-            ? { ...m, toolStatus: 'progress' as const, toolProgressMessage: msg.message }
+            ? {
+                ...m,
+                toolStatus: 'progress' as const,
+                toolProgressMessage: msg.message,
+                toolProgressMessages: [...(m.toolProgressMessages ?? []), msg.message],
+              }
             : m,
         );
         break;

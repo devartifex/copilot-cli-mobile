@@ -45,6 +45,7 @@ import type { ChatMessage } from '$lib/types/index.js';
       mcpToolName: message.mcpToolName,
       status: message.toolStatus ?? 'running',
       message: message.toolProgressMessage,
+      progressMessages: message.toolProgressMessages,
     };
   });
 

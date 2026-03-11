@@ -23,6 +23,9 @@ jobs:
         run: npm audit --audit-level=high
         continue-on-error: true
 
+      - name: Generate SvelteKit types
+        run: npx svelte-kit sync
+
       - name: Type check
         run: npm run check
 

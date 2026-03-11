@@ -113,9 +113,10 @@ export function createWsStore(): WsStore {
     if (typeof window === 'undefined') return;
     console.log(`[WS-STORE] connect() called, existing ws=${!!ws}, readyState=${ws?.readyState}`);
 
-    // Close existing connection
+    // Close existing connection without triggering reconnect logic
     if (ws) {
       console.log('[WS-STORE] Closing existing connection before reconnect');
+      ws.onclose = null;
       try { ws.close(); } catch { /* ignore */ }
       ws = null;
     }
@@ -170,6 +171,7 @@ export function createWsStore(): WsStore {
       visibilityCleanup = null;
     }
     if (ws) {
+      ws.onclose = null; // prevent onclose from scheduling a reconnect
       try { ws.close(); } catch { /* ignore */ }
       ws = null;
     }

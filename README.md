@@ -1,5 +1,17 @@
 # Copilot Unleashed
 
+<p align="center">
+  <a href="https://github.com/devartifex/copilot-unleashed/actions/workflows/ci.yml"><img src="https://github.com/devartifex/copilot-unleashed/workflows/CI/badge.svg" alt="CI"></a>
+  <a href="https://github.com/devartifex/copilot-unleashed/actions/workflows/deploy.yml"><img src="https://github.com/devartifex/copilot-unleashed/workflows/Deploy/badge.svg" alt="Deploy"></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D24-brightgreen?logo=node.js&logoColor=white" alt="Node ≥24">
+  <img src="https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Svelte-5-orange?logo=svelte&logoColor=white" alt="Svelte 5">
+  <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/Azure-Container%20Apps-0078D4?logo=microsoftazure&logoColor=white" alt="Azure Container Apps">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/built%20with-GitHub%20Copilot-8A2BE2?logo=githubcopilot&logoColor=white" alt="Built with GitHub Copilot">
+</p>
+
 **Every Copilot model. One login. Any device. Your server.**
 
 The only open-source web UI built on the official [`@github/copilot-sdk`](https://github.com/github/copilot-sdk).

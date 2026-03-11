@@ -12,3 +12,4 @@ test-results/
 playwright-report/
 .azure/
 public/
+bundled-sessions/

@@ -13,3 +13,5 @@ dist
 docker-compose.yml
 infra
 docs
+# bundled-sessions/ is intentionally NOT excluded — it's created by
+# scripts/bundle-sessions.mjs and included in the Docker image

@@ -5,6 +5,7 @@
     connectionState: ConnectionState;
     sessionReady: boolean;
     isStreaming: boolean;
+    isWaiting: boolean;
     mode: SessionMode;
     pendingUserInput: UserInputState | null;
     onSend: (content: string, attachments?: Array<{ path: string; name: string; type: string }>) => void;
@@ -26,6 +27,7 @@
     connectionState,
     sessionReady,
     isStreaming,
+    isWaiting,
     mode,
     pendingUserInput,
     onSend,
@@ -362,7 +364,7 @@
       </div>
 
       <div class="toolbar-right">
-        {#if isStreaming}
+        {#if isStreaming || isWaiting}
           <button class="circle-btn stop-btn" onclick={onAbort} aria-label="Stop generating">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
               <rect x="2" y="2" width="10" height="10" rx="2"/>

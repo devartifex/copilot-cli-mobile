@@ -472,6 +472,7 @@ export function createChatStore(wsStore: WsStore): ChatStore {
     currentSessionId = null;
     pendingUserInput = null;
     pendingPermission = null;
+    contextInfo = null;
   }
 
   function addUserMessage(content: string): void {

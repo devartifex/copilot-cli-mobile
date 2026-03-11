@@ -42,10 +42,6 @@ param ipRestrictions string = ''
 @description('Azure Storage account name for persistent data')
 param storageAccountName string
 
-@secure()
-@description('Azure Storage account key')
-param storageAccountKey string
-
 @description('Azure Files share name')
 param storageShareName string = 'copilot-data'
 
@@ -80,14 +76,13 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01'
   }
 }
 
-resource envStorage 'Microsoft.App/managedEnvironments/storages@2024-03-01' = {
+resource envStorage 'Microsoft.App/managedEnvironments/storages@2024-02-02-preview' = {
   parent: containerAppsEnvironment
   name: 'persistent-data'
   properties: {
-    azureFile: {
-      accountName: storageAccountName
-      accountKey: storageAccountKey
-      shareName: storageShareName
+    nfsAzureFile: {
+      server: '${storageAccountName}.file.${environment().suffixes.storage}'
+      shareName: '/${storageShareName}'
       accessMode: 'ReadWrite'
     }
   }

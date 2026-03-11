@@ -11,6 +11,9 @@ param location string
 
 param containerAppName string = 'copilot-unleashed'
 
+@description('Resource group name (defaults to rg-copilot-unleashed)')
+param resourceGroupName string = 'rg-copilot-unleashed'
+
 @secure()
 @minLength(1)
 @description('GitHub OAuth app client ID')
@@ -45,7 +48,7 @@ var resourceToken = toLower(uniqueString(subscription().id, environmentName, loc
 var tags = { 'azd-env-name': environmentName }
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
-  name: '${abbrs.resourceGroup}${environmentName}'
+  name: resourceGroupName
   location: location
   tags: tags
 }
@@ -113,7 +116,6 @@ module containerApps './modules/container-apps.bicep' = {
     memoryGi: memoryGi
     ipRestrictions: ipRestrictions
     storageAccountName: storage.outputs.storageAccountName
-    storageAccountKey: storage.outputs.storageAccountKey
     storageShareName: storage.outputs.shareName
   }
 }

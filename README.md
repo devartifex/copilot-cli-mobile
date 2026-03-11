@@ -188,7 +188,7 @@ That's it. Container Apps, ACR, managed identity, TLS, monitoring — all provis
 | `TOKEN_MAX_AGE_MS` | `86400000` | Force re-auth interval (24h) |
 | `SESSION_STORE_PATH` | `/data/sessions` | Persistent session directory |
 | `SETTINGS_STORE_PATH` | `/data/settings` | Per-user settings directory |
-| `COPILOT_CONFIG_DIR` | `~/.copilot` | Copilot CLI config/session-state directory — set to share sessions with the CLI |
+| `COPILOT_CONFIG_DIR` | — | Copilot CLI config/session-state directory — set to share sessions with the CLI (e.g. `~/.copilot`) |
 
 </details>
 

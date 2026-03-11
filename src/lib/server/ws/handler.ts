@@ -762,7 +762,7 @@ export function setupWebSocket(
                 onPermissionRequest: (await import('@github/copilot-sdk')).approveAll,
                 streaming: true,
                 onUserInputRequest: makeUserInputHandler(connectionEntry),
-                ...(config.copilotConfigDir && { configDir: config.copilotConfigDir }),
+                configDir: config.copilotConfigDir,
               });
 
               wireSessionEvents(connectionEntry.session, connectionEntry);

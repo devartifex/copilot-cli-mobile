@@ -84,16 +84,6 @@ module monitoring './modules/monitoring.bicep' = {
   }
 }
 
-module storage './modules/storage.bicep' = {
-  name: 'storage'
-  scope: rg
-  params: {
-    name: '${abbrs.storageAccount}${resourceToken}'
-    location: location
-    tags: tags
-  }
-}
-
 module containerApps './modules/container-apps.bicep' = {
   name: 'container-apps'
   scope: rg
@@ -115,8 +105,6 @@ module containerApps './modules/container-apps.bicep' = {
     cpuCores: cpuCores
     memoryGi: memoryGi
     ipRestrictions: ipRestrictions
-    storageAccountName: storage.outputs.storageAccountName
-    storageShareName: storage.outputs.shareName
   }
 }
 

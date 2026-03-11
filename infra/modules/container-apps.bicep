@@ -39,11 +39,7 @@ param allowedOrigins string = ''
 @description('Comma-separated IP ranges to allow (CIDR notation, empty = allow all)')
 param ipRestrictions string = ''
 
-@description('Azure Storage account name for persistent data')
-param storageAccountName string
 
-@description('Azure Files share name')
-param storageShareName string = 'copilot-data'
 
 @description('CPU cores per container replica (e.g. 0.25, 0.5, 1, 2, 4)')
 param cpuCores string = '1'
@@ -73,18 +69,6 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01'
         workloadProfileType: 'Consumption'
       }
     ]
-  }
-}
-
-resource envStorage 'Microsoft.App/managedEnvironments/storages@2024-02-02-preview' = {
-  parent: containerAppsEnvironment
-  name: 'persistent-data'
-  properties: {
-    nfsAzureFile: {
-      server: '${storageAccountName}.file.${environment().suffixes.storage}'
-      shareName: '/${storageShareName}'
-      accessMode: 'ReadWrite'
-    }
   }
 }
 
@@ -157,18 +141,10 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'BASE_URL', value: 'https://${name}.${containerAppsEnvironment.properties.defaultDomain}' }
             { name: 'GITHUB_CLIENT_ID', secretRef: 'github-client-id' }
             { name: 'SESSION_SECRET', secretRef: 'session-secret' }
-            { name: 'SESSION_STORE_PATH', value: '/data/sessions' }
-            { name: 'SETTINGS_STORE_PATH', value: '/data/settings' }
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
           ], hasAllowedUsers ? [
             { name: 'ALLOWED_GITHUB_USERS', secretRef: 'allowed-github-users' }
           ] : [])
-          volumeMounts: [
-            {
-              volumeName: 'persistent-data'
-              mountPath: '/data'
-            }
-          ]
           resources: {
             cpu: json(cpuCores)
             memory: memoryGi
@@ -195,13 +171,6 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               failureThreshold: 3
             }
           ]
-        }
-      ]
-      volumes: [
-        {
-          name: 'persistent-data'
-          storageName: envStorage.name
-          storageType: 'AzureFile'
         }
       ]
       scale: {

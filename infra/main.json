@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "7316216460369709432"
+      "templateHash": "75301463888468150"
     }
   },
   "parameters": {
@@ -414,118 +414,6 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
-      "name": "storage",
-      "resourceGroup": "[parameters('resourceGroupName')]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "name": {
-            "value": "[format('{0}{1}', variables('abbrs').storageAccount, variables('resourceToken'))]"
-          },
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "tags": {
-            "value": "[variables('tags')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.40.2.10011",
-              "templateHash": "866459084523481887"
-            }
-          },
-          "parameters": {
-            "name": {
-              "type": "string",
-              "metadata": {
-                "description": "Name prefix for the storage account"
-              }
-            },
-            "location": {
-              "type": "string",
-              "metadata": {
-                "description": "Location for the resource"
-              }
-            },
-            "tags": {
-              "type": "object",
-              "defaultValue": {}
-            },
-            "shareName": {
-              "type": "string",
-              "defaultValue": "copilot-data",
-              "metadata": {
-                "description": "Name of the file share for persistent data"
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Storage/storageAccounts",
-              "apiVersion": "2023-05-01",
-              "name": "[parameters('name')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "kind": "FileStorage",
-              "sku": {
-                "name": "Premium_LRS"
-              },
-              "properties": {
-                "minimumTlsVersion": "TLS1_2",
-                "supportsHttpsTrafficOnly": false,
-                "allowBlobPublicAccess": false,
-                "allowSharedKeyAccess": false
-              }
-            },
-            {
-              "type": "Microsoft.Storage/storageAccounts/fileServices",
-              "apiVersion": "2023-05-01",
-              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
-              "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
-              "apiVersion": "2023-05-01",
-              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', parameters('shareName'))]",
-              "properties": {
-                "enabledProtocols": "NFS",
-                "rootSquash": "NoRootSquash",
-                "shareQuota": 100
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('name'), 'default')]"
-              ]
-            }
-          ],
-          "outputs": {
-            "storageAccountName": {
-              "type": "string",
-              "value": "[parameters('name')]"
-            },
-            "shareName": {
-              "type": "string",
-              "value": "[parameters('shareName')]"
-            }
-          }
-        }
-      },
-      "dependsOn": [
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
       "name": "container-apps",
       "resourceGroup": "[parameters('resourceGroupName')]",
       "properties": {
@@ -582,12 +470,6 @@
           },
           "ipRestrictions": {
             "value": "[parameters('ipRestrictions')]"
-          },
-          "storageAccountName": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.storageAccountName.value]"
-          },
-          "storageShareName": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.shareName.value]"
           }
         },
         "template": {
@@ -597,7 +479,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.40.2.10011",
-              "templateHash": "17339671495820908641"
+              "templateHash": "3330525320948391814"
             }
           },
           "parameters": {
@@ -689,19 +571,6 @@
                 "description": "Comma-separated IP ranges to allow (CIDR notation, empty = allow all)"
               }
             },
-            "storageAccountName": {
-              "type": "string",
-              "metadata": {
-                "description": "Azure Storage account name for persistent data"
-              }
-            },
-            "storageShareName": {
-              "type": "string",
-              "defaultValue": "copilot-data",
-              "metadata": {
-                "description": "Azure Files share name"
-              }
-            },
             "cpuCores": {
               "type": "string",
               "defaultValue": "1",
@@ -743,21 +612,6 @@
                   }
                 ]
               }
-            },
-            {
-              "type": "Microsoft.App/managedEnvironments/storages",
-              "apiVersion": "2024-02-02-preview",
-              "name": "[format('{0}/{1}', parameters('environmentName'), 'persistent-data')]",
-              "properties": {
-                "nfsAzureFile": {
-                  "server": "[format('{0}.file.{1}', parameters('storageAccountName'), environment().suffixes.storage)]",
-                  "shareName": "[format('/{0}', parameters('storageShareName'))]",
-                  "accessMode": "ReadWrite"
-                }
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))]"
-              ]
             },
             {
               "type": "Microsoft.App/containerApps",
@@ -818,13 +672,7 @@
                     {
                       "name": "copilot-unleashed",
                       "image": "[parameters('image')]",
-                      "env": "[concat(createArray(createObject('name', 'NODE_ENV', 'value', 'production'), createObject('name', 'PORT', 'value', '3000'), createObject('name', 'BASE_URL', 'value', format('https://{0}.{1}', parameters('name'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('environmentName')), '2024-03-01').defaultDomain)), createObject('name', 'GITHUB_CLIENT_ID', 'secretRef', 'github-client-id'), createObject('name', 'SESSION_SECRET', 'secretRef', 'session-secret'), createObject('name', 'SESSION_STORE_PATH', 'value', '/data/sessions'), createObject('name', 'SETTINGS_STORE_PATH', 'value', '/data/settings'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', parameters('appInsightsConnectionString'))), if(variables('hasAllowedUsers'), createArray(createObject('name', 'ALLOWED_GITHUB_USERS', 'secretRef', 'allowed-github-users')), createArray()))]",
-                      "volumeMounts": [
-                        {
-                          "volumeName": "persistent-data",
-                          "mountPath": "/data"
-                        }
-                      ],
+                      "env": "[concat(createArray(createObject('name', 'NODE_ENV', 'value', 'production'), createObject('name', 'PORT', 'value', '3000'), createObject('name', 'BASE_URL', 'value', format('https://{0}.{1}', parameters('name'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('environmentName')), '2024-03-01').defaultDomain)), createObject('name', 'GITHUB_CLIENT_ID', 'secretRef', 'github-client-id'), createObject('name', 'SESSION_SECRET', 'secretRef', 'session-secret'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', parameters('appInsightsConnectionString'))), if(variables('hasAllowedUsers'), createArray(createObject('name', 'ALLOWED_GITHUB_USERS', 'secretRef', 'allowed-github-users')), createArray()))]",
                       "resources": {
                         "cpu": "[json(parameters('cpuCores'))]",
                         "memory": "[parameters('memoryGi')]"
@@ -853,13 +701,6 @@
                       ]
                     }
                   ],
-                  "volumes": [
-                    {
-                      "name": "persistent-data",
-                      "storageName": "persistent-data",
-                      "storageType": "AzureFile"
-                    }
-                  ],
                   "scale": {
                     "minReplicas": "[parameters('minReplicas')]",
                     "maxReplicas": "[parameters('maxReplicas')]",
@@ -877,8 +718,7 @@
                 }
               },
               "dependsOn": [
-                "[resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))]",
-                "[resourceId('Microsoft.App/managedEnvironments/storages', parameters('environmentName'), 'persistent-data')]"
+                "[resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))]"
               ]
             }
           ],
@@ -894,8 +734,7 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'container-registry')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'managed-identity')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'monitoring')]",
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'storage')]"
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
       ]
     }
   ],

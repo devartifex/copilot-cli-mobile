@@ -34,7 +34,7 @@ The only open-source web UI built on the official [`@github/copilot-sdk`](https:
 
 - **Every Copilot model** — switch mid-conversation, keep full history
 - **Autopilot mode** — agents that plan, code, run tests, and open PRs autonomously
-- **Extended thinking** — live reasoning traces from o3 and Claude
+- **Extended thinking** — live reasoning traces from Claude Opus 4.6 and Claude Sonnet 4.6
 - **GitHub MCP tools** — issues, PRs, code search, repos — built in
 - **Custom MCP servers** — plug in your own
 - **Custom webhook tools** — connect any API (Jira, Slack, internal services)
@@ -57,9 +57,9 @@ The only open-source web UI built on the official [`@github/copilot-sdk`](https:
 
 **Review PRs from your phone.** Commuting? Ask Copilot to summarize any pull request, flag security issues in the diff, and draft review comments — no laptop needed.
 
-**Compare models on hard problems.** Ask GPT-4.1 for speed, switch to o3 for deep reasoning, then Claude for a different angle. Same conversation, all history preserved.
+**Compare models on hard problems.** Ask GPT-5.4 for speed, switch to Claude Opus 4.6 for deep reasoning, then Gemini 3 Pro for a different angle. Same conversation, all history preserved.
 
-**Watch it think.** Enable extended thinking on o3 or Claude — see the live reasoning trace in a collapsible block before the answer. You see *how* it gets there, not just what it concludes.
+**Watch it think.** Enable extended thinking on Claude Opus 4.6 or Claude Sonnet 4.6 — see the live reasoning trace in a collapsible block before the answer. You see *how* it gets there, not just what it concludes.
 
 **Connect your own tools.** Define webhook tools in the settings UI. Copilot calls your Jira, your database, your internal APIs — as part of its agentic workflow.
 
@@ -118,18 +118,18 @@ Read that on your commute. Reply, approve, or request changes — without openin
 
 | | Monthly price | Models unlocked | IDE required |
 |---|:---:|---|:---:|
-| ChatGPT Plus | ~$25 | OpenAI only (GPT-5.4 Thinking, Codex) | — |
-| ChatGPT Pro | ~$250 | OpenAI only, unlimited | — |
-| Claude Pro | $20 | Claude only (Sonnet, Haiku) | — |
+| ChatGPT Plus | ~$20 | OpenAI only (GPT-5.4, GPT-5 mini) | — |
+| ChatGPT Pro | ~$200 | OpenAI only, unlimited | — |
+| Claude Pro | $20 | Claude only (Sonnet 4.6, Haiku 4.5) | — |
 | Claude Max | $100+ | Claude only, 5–20× more usage | — |
 | Cursor Pro | $20 | GPT + Claude + Gemini | ✅ |
 | Cursor Pro+ | $60 | GPT + Claude + Gemini (3× usage) | ✅ |
 | Windsurf Pro | $15 | GPT + Claude + Gemini (500 credits/mo) | ✅ |
 | Copilot Pro | $10 | GPT + Claude + Gemini (300 premium req.) | — |
-| **Copilot Pro+ → This** | **$39** | **GPT + o-series + Claude Opus + Gemini** | **—** |
+| **Copilot Pro+ → This** | **$39** | **GPT-5.4 + Claude Opus 4.6 + Gemini 3 Pro + Grok Code Fast 1** | **—** |
 | ChatGPT + Claude + Gemini separately | $65+ | Full multi-vendor (3 separate UIs) | — |
 
-Copilot Pro+ at $39/month is the only way to get GPT, o-series, Claude Opus, and Gemini through a single subscription — at less than half the cost of buying each service individually. This app runs it all on mobile and desktop with autopilot agents, persistent sessions, and a self-hosted server you control.
+Copilot Pro+ at $39/month is the only way to get GPT-5.4, Claude Opus 4.6, Gemini 3 Pro, and Grok Code Fast 1 through a single subscription — at less than half the cost of buying each service individually. This app runs it all on mobile and desktop with autopilot agents, persistent sessions, and a self-hosted server you control.
 
 ---
 

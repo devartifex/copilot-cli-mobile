@@ -706,6 +706,8 @@ export function setupWebSocket(
 
           case 'list_sessions': {
             try {
+              // start() is idempotent — no-op if already connected
+              await connectionEntry.client.start();
               const sessions = await connectionEntry.client.listSessions();
               const rawList = Array.isArray(sessions) ? sessions : [];
 

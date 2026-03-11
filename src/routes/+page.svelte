@@ -245,6 +245,7 @@
         connectionState={wsStore.connectionState}
         sessionReady={wsStore.sessionReady}
         isStreaming={chatStore.isStreaming}
+        isWaiting={chatStore.isWaiting}
         mode={chatStore.mode}
         pendingUserInput={chatStore.pendingUserInput}
         onSend={handleSend}

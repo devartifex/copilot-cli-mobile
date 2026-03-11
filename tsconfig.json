@@ -1,0 +1,13 @@
+{
+  "extends": "./.svelte-kit/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": true
+  },
+  "exclude": ["src/index.ts", "src/server.ts", "src/config.ts", "src/auth/**/*", "src/copilot/**/*", "src/routes/auth.ts", "src/routes/api.ts", "src/ws/**/*", "src/types/**/*", "src/security-log.ts", "dist/**/*", "build/**/*"]
+}

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.svelte-kit/
+.env
+.env.local
+.sessions/
+*.log
+.DS_Store
+Thumbs.db
+test-results/
+playwright-report/
+.azure/
+public/

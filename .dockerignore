@@ -1,0 +1,15 @@
+node_modules
+dist
+.sessions
+.env
+.env.*
+!.env.example
+.git
+.github
+.azure
+.vscode
+*.md
+!README.md
+docker-compose.yml
+infra
+docs

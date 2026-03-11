@@ -1,0 +1,61 @@
+{
+  "name": "copilot-unleashed",
+  "version": "2.0.0",
+  "description": "Copilot Unleashed — Self-hosted multi-model AI chat powered by the GitHub Copilot SDK",
+  "main": "build/index.js",
+  "scripts": {
+    "build:server": "tsc -p tsconfig.node.json",
+    "build": "npm run build:server && vite build",
+    "start": "node server.js",
+    "dev": "docker compose up --build",
+    "dev:local": "npm run build:server && vite dev",
+    "dev:down": "docker compose down",
+    "preview": "npm run build && node server.js",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "npx playwright test",
+    "test:ui": "npx playwright test --ui",
+    "clean": "rm -rf build dist .svelte-kit",
+    "postinstall": "node scripts/patch-sdk.mjs"
+  },
+  "keywords": [
+    "copilot",
+    "github",
+    "ai-chat",
+    "multi-model",
+    "sveltekit",
+    "self-hosted",
+    "copilot-sdk"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "@github/copilot-sdk": "^0.1.32",
+    "@sveltejs/adapter-node": "^5.5.4",
+    "@sveltejs/kit": "^2.53.4",
+    "dompurify": "^3.3.2",
+    "express-session": "^1.18.0",
+    "highlight.js": "^11.11.1",
+    "isomorphic-dompurify": "^3.1.0",
+    "marked": "^17.0.4",
+    "session-file-store": "^1.5.0",
+    "svelte": "^5.53.9",
+    "vite": "^7.3.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@types/dompurify": "^3.0.5",
+    "@types/express-session": "^1.18.0",
+    "@types/node": "^20.17.0",
+    "@types/session-file-store": "^1.2.6",
+    "@types/ws": "^8.5.13",
+    "svelte-check": "^4.4.5",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

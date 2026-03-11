@@ -1,0 +1,32 @@
+{
+  "name": "Copilot Unleashed",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+  "postCreateCommand": "npm install && npm install -g @github/copilot",
+  "postStartCommand": "bash .devcontainer/startup.sh",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Copilot Unleashed",
+      "onAutoForward": "openBrowserOnce",
+      "visibility": "public"
+    }
+  },
+  "customizations": {
+    "codespaces": {
+      "secrets": [
+        {
+          "name": "GITHUB_CLIENT_ID",
+          "description": "GitHub OAuth App Client ID (no client secret needed). Create one at github.com/settings/developers — Homepage URL and callback URL can both be http://localhost:3000.",
+          "documentationUrl": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app"
+        }
+      ]
+    },
+    "vscode": {
+      "extensions": [
+        "svelte.svelte-vscode",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}

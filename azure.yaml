@@ -1,0 +1,11 @@
+name: copilot-unleashed
+metadata:
+  template: copilot-unleashed@2.0.0
+
+services:
+  web:
+    project: .
+    host: containerapp
+    language: ts
+    docker:
+      path: ./Dockerfile

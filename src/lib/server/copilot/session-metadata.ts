@@ -1,4 +1,4 @@
-import { readFile, readdir, access } from 'node:fs/promises';
+import { readFile, readdir, access, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { config } from '../config.js';
@@ -186,4 +186,77 @@ function parseWorkspaceYaml(content: string): Record<string, string> {
   }
 
   return result;
+}
+
+/** Lightweight session summary returned by the filesystem scanner */
+export interface FilesystemSession {
+  id: string;
+  title?: string;
+  updatedAt?: string;
+  cwd?: string;
+  repository?: string;
+  branch?: string;
+  checkpointCount: number;
+  hasPlan: boolean;
+}
+
+/**
+ * Scan the session-state directory on disk and return session summaries built
+ * from workspace.yaml metadata. This is the fallback when the SDK returns
+ * nothing (e.g. bundled sessions copied into a fresh container).
+ */
+export async function listSessionsFromFilesystem(): Promise<FilesystemSession[]> {
+  const stateDir = getSessionStateDir();
+
+  let entries: string[];
+  try {
+    entries = await readdir(stateDir);
+  } catch {
+    return [];
+  }
+
+  // UUID pattern — only pick directories that look like session IDs
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  const results = await Promise.all(
+    entries
+      .filter((name) => uuidRe.test(name))
+      .map(async (sessionId): Promise<FilesystemSession | null> => {
+        const sessionDir = join(stateDir, sessionId);
+
+        try {
+          const info = await stat(sessionDir);
+          if (!info.isDirectory()) return null;
+        } catch {
+          return null;
+        }
+
+        let metadata: Record<string, string> = {};
+        try {
+          const yamlContent = await readFile(join(sessionDir, 'workspace.yaml'), 'utf-8');
+          metadata = parseWorkspaceYaml(yamlContent);
+        } catch {
+          // No workspace.yaml — skip this directory
+          return null;
+        }
+
+        const [checkpointCount, planExists] = await Promise.all([
+          countCheckpoints(sessionDir),
+          hasPlan(sessionDir),
+        ]);
+
+        return {
+          id: sessionId,
+          title: metadata.summary || undefined,
+          updatedAt: metadata.updated_at || metadata.created_at,
+          cwd: metadata.cwd,
+          repository: metadata.repository,
+          branch: metadata.branch,
+          checkpointCount,
+          hasPlan: planExists,
+        };
+      }),
+  );
+
+  return results.filter((s): s is FilesystemSession => s !== null);
 }

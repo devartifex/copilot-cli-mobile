@@ -3,7 +3,7 @@ import { Server, IncomingMessage } from 'http';
 import { approveAll } from '@github/copilot-sdk';
 import { createCopilotClient } from '../copilot/client.js';
 import { createCopilotSession, getAvailableModels } from '../copilot/session.js';
-import { enrichSessionMetadata, getSessionDetail } from '../copilot/session-metadata.js';
+import { enrichSessionMetadata, getSessionDetail, listSessionsFromFilesystem } from '../copilot/session-metadata.js';
 import { config } from '../config.js';
 import { logSecurity } from '../security-log.js';
 import { validateGitHubToken } from '../auth/github.js';
@@ -712,7 +712,7 @@ export function setupWebSocket(
               const rawList = Array.isArray(sessions) ? sessions : [];
 
               // Enrich each session with filesystem metadata in parallel
-              const list = await Promise.all(
+              const sdkSessions = await Promise.all(
                 rawList.map(async (s: any) => {
                   const id = s.sessionId ?? s.id;
                   const enriched = await enrichSessionMetadata(id, s.context, s.isRemote);
@@ -726,10 +726,23 @@ export function setupWebSocket(
                 }),
               );
 
+              // Merge with filesystem sessions the SDK may not know about
+              // (e.g. bundled sessions copied into a fresh container)
+              const fsSessions = await listSessionsFromFilesystem();
+              const sdkIds = new Set(sdkSessions.map((s) => s.id));
+              const extraSessions = fsSessions.filter((s) => !sdkIds.has(s.id));
+              const list = [...sdkSessions, ...extraSessions];
+
               poolSend(connectionEntry, { type: 'sessions', sessions: list });
             } catch (err: any) {
               console.error('List sessions error:', err.message);
-              poolSend(connectionEntry, { type: 'sessions', sessions: [] });
+              // SDK failed — fall back to filesystem-only listing
+              try {
+                const fsSessions = await listSessionsFromFilesystem();
+                poolSend(connectionEntry, { type: 'sessions', sessions: fsSessions });
+              } catch {
+                poolSend(connectionEntry, { type: 'sessions', sessions: [] });
+              }
             }
             break;
           }

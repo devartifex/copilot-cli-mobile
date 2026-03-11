@@ -57,6 +57,7 @@
       class:failed={tool.status === 'failed'}
       class:expandable={true}
       type="button"
+      aria-expanded={expanded}
       onclick={toggle}
     >
       <span class="tool-chevron">▼</span>
@@ -67,7 +68,7 @@
       {/if}
     </button>
     <div class="tool-progress-list">
-      {#each tool.progressMessages ?? [] as msg, i (i)}
+      {#each tool.progressMessages ?? [] as msg}
         <div class="tool-progress-item">{msg}</div>
       {/each}
     </div>

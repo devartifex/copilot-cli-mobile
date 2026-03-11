@@ -49,6 +49,12 @@ param storageAccountKey string
 @description('Azure Files share name')
 param storageShareName string = 'copilot-data'
 
+@description('CPU cores per container replica (e.g. 0.25, 0.5, 1, 2, 4)')
+param cpuCores string = '1'
+
+@description('Memory per container replica (e.g. 0.5Gi, 1Gi, 2Gi, 4Gi, 8Gi)')
+param memoryGi string = '2Gi'
+
 var hasAllowedUsers = !empty(allowedGithubUsers)
 
 var parsedIpRestrictions = empty(ipRestrictions) ? [] : split(ipRestrictions, ',')
@@ -169,8 +175,8 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
           ]
           resources: {
-            cpu: json('0.25')
-            memory: '0.5Gi'
+            cpu: json(cpuCores)
+            memory: memoryGi
           }
           probes: [
             {

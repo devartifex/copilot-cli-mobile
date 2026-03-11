@@ -28,6 +28,12 @@ param minReplicas int = 1
 @description('Maximum replicas')
 param maxReplicas int = 3
 
+@description('CPU cores per replica (e.g. 0.25, 0.5, 1, 2, 4)')
+param cpuCores string = '1'
+
+@description('Memory per replica (e.g. 0.5Gi, 1Gi, 2Gi, 4Gi, 8Gi)')
+param memoryGi string = '2Gi'
+
 @description('Comma-separated IP ranges to allow access (CIDR notation, empty = allow all)')
 param ipRestrictions string = ''
 
@@ -103,6 +109,8 @@ module containerApps './modules/container-apps.bicep' = {
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     minReplicas: minReplicas
     maxReplicas: maxReplicas
+    cpuCores: cpuCores
+    memoryGi: memoryGi
     ipRestrictions: ipRestrictions
     storageAccountName: storage.outputs.storageAccountName
     storageAccountKey: storage.outputs.storageAccountKey

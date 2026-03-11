@@ -10,6 +10,7 @@ import type {
 const INITIAL_RECONNECT_DELAY = 3000;
 const MAX_RECONNECT_DELAY = 60_000;
 const UNAUTHORIZED_CODE = 4001;
+const REPLACED_CODE = 4002;
 
 export interface WsStore {
   readonly connectionState: ConnectionState;
@@ -151,6 +152,13 @@ export function createWsStore(): WsStore {
         window.location.reload();
         return;
       }
+
+      // 4002 = replaced by a newer connection we opened — don't reconnect
+      // (the newer socket is already active)
+      if (event.code === REPLACED_CODE) {
+        return;
+      }
+
       scheduleReconnect();
     };
 

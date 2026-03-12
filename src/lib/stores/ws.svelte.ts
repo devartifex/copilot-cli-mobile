@@ -12,6 +12,9 @@ const MAX_RECONNECT_DELAY = 60_000;
 const UNAUTHORIZED_CODE = 4001;
 const REPLACED_CODE = 4002;
 
+// Unique ID for this browser tab so the server can isolate sessions per tab
+const TAB_ID = crypto.randomUUID();
+
 export interface WsStore {
   readonly connectionState: ConnectionState;
   readonly sessionReady: boolean;
@@ -92,7 +95,7 @@ export function createWsStore(): WsStore {
   function buildWsUrl(): string {
     if (typeof window === 'undefined') return '';
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${proto}//${window.location.host}/ws`;
+    return `${proto}//${window.location.host}/ws?tabId=${TAB_ID}`;
   }
 
   function setupVisibilityHandler(): void {

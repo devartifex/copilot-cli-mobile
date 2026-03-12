@@ -66,6 +66,7 @@ function wireSessionEvents(session: any, entry: PoolEntry, sessionId?: string): 
   session.on('assistant.turn_end', () => {
     entry.isProcessing = false;
     poolSend(entry, { type: 'turn_end' });
+    poolSend(entry, { type: 'done' });
   });
   session.on('tool.execution_start', (event: any) => {
     console.log('[TOOL] execution_start:', event.data.toolName, 'mcp:', event.data.mcpServerName, '/', event.data.mcpToolName);
@@ -177,7 +178,7 @@ function makeUserInputHandler(entry: PoolEntry) {
   };
 }
 
-const PERMISSION_TIMEOUT_MS = 30_000;
+const PERMISSION_TIMEOUT_MS = 300_000; // 5 minutes
 
 function extractPermissionDisplay(request: any): {
   kind: string;
@@ -563,12 +564,10 @@ export function setupWebSocket(
               : undefined;
 
             connectionEntry.isProcessing = true;
-            await connectionEntry.session.sendAndWait({
+            await connectionEntry.session.send({
               prompt: content,
               ...(attachments?.length ? { attachments } : {}),
             });
-            connectionEntry.isProcessing = false;
-            poolSend(connectionEntry, { type: 'done' });
             break;
           }
 

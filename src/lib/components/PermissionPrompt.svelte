@@ -9,7 +9,7 @@
 
   const { requestId, kind, toolName, toolArgs, onRespond }: Props = $props();
 
-  const COUNTDOWN_SECONDS = 30;
+  const COUNTDOWN_SECONDS = 300; // 5 minutes
 
   let secondsLeft = $state(COUNTDOWN_SECONDS);
   let argsExpanded = $state(false);
@@ -18,7 +18,7 @@
   const argsJson = $derived(JSON.stringify(toolArgs, null, 2));
   const hasArgs = $derived(Object.keys(toolArgs).length > 0);
   const isLargeArgs = $derived(argsJson.length > 120);
-  const isUrgent = $derived(secondsLeft <= 10);
+  const isUrgent = $derived(secondsLeft <= 30);
 
   const kindIcon: Record<string, string> = {
     shell: '💻',
@@ -41,6 +41,33 @@
     }, 1000);
 
     return () => clearInterval(interval);
+  });
+
+  // Browser notification when the prompt appears (user may have switched tabs)
+  $effect(() => {
+    if (typeof Notification === 'undefined') return;
+
+    const fire = () => {
+      const notif = new Notification(`Tool approval needed: ${kind}`, {
+        body: toolName,
+        icon: '/favicon.png',
+        tag: requestId,
+        requireInteraction: true,
+      });
+      notif.onclick = () => {
+        window.focus();
+        notif.close();
+      };
+      return () => notif.close();
+    };
+
+    if (Notification.permission === 'granted') {
+      return fire();
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission().then((perm) => {
+        if (perm === 'granted') fire();
+      });
+    }
   });
 
   // Auto-scroll into view when the prompt appears
@@ -84,7 +111,7 @@
     </button>
   </div>
 
-  <div class="permission-countdown">Auto-deny in {secondsLeft}s</div>
+  <div class="permission-countdown">Auto-deny in {secondsLeft >= 60 ? `${Math.floor(secondsLeft / 60)}m ${secondsLeft % 60}s` : `${secondsLeft}s`}</div>
 </div>
 
 <style>

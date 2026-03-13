@@ -47,4 +47,32 @@ test.describe('Chat screen structure', () => {
     // Should return 401 or redirect when not authenticated
     expect([401, 403, 302].includes(response.status()) || response.ok()).toBeTruthy();
   });
+
+  test('health endpoint returns valid JSON', async ({ page }) => {
+    const response = await page.request.get('/health');
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).toContain('application/json');
+
+    const data = await response.json();
+    expect(data).toEqual({ status: 'ok' });
+  });
+
+  test('auth status endpoint returns unauthenticated JSON shape', async ({ page }) => {
+    const response = await page.request.get('/auth/status');
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).toContain('application/json');
+
+    const data = await response.json();
+    expect(data).toMatchObject({ authenticated: false, githubUser: null });
+    expect(data).not.toHaveProperty('user');
+  });
+
+  test('models API returns 401 when not authenticated', async ({ page }) => {
+    const response = await page.request.get('/api/models');
+    expect(response.status()).toBe(401);
+    expect(response.headers()['content-type']).toContain('application/json');
+
+    const data = await response.json();
+    expect(data).toHaveProperty('error');
+  });
 });

@@ -398,6 +398,13 @@ export function createChatStore(wsStore: WsStore): ChatStore {
         break;
 
       case 'plan_updated':
+        if (msg.content !== undefined || msg.path !== undefined) {
+          plan = {
+            exists: true,
+            content: msg.content ?? plan.content,
+            path: msg.path ?? plan.path,
+          };
+        }
         addInfoMessage('Plan saved');
         break;
 

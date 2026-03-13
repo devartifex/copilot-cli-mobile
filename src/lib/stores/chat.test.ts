@@ -290,7 +290,7 @@ describe('createChatStore', () => {
       { type: 'context_info', tokenLimit: 64000, currentTokens: 4000, messagesLength: 12 },
       { type: 'plan', exists: true, content: '1. Investigate\n2. Ship', path: '/tmp/plan.md' },
       { type: 'plan_changed' },
-      { type: 'plan_updated' },
+      { type: 'plan_updated', content: '1. Investigate\n2. Ship\n3. Verify', path: '/tmp/plan.md' },
       { type: 'compaction_start' },
       { type: 'compaction_complete', tokensRemoved: 120, messagesRemoved: 3 },
       { type: 'compaction_result', messagesRemoved: 1 },
@@ -307,7 +307,7 @@ describe('createChatStore', () => {
     });
     expect(store.quotaSnapshots).toEqual(updatedQuota);
     expect(store.contextInfo).toEqual({ tokenLimit: 64000, currentTokens: 4000, messagesLength: 12 });
-    expect(store.plan).toEqual({ exists: true, content: '1. Investigate\n2. Ship', path: '/tmp/plan.md' });
+    expect(store.plan).toEqual({ exists: true, content: '1. Investigate\n2. Ship\n3. Verify', path: '/tmp/plan.md' });
     expect(store.reasoningEffort).toBe('high');
 
     dispatch(store, { type: 'plan_deleted' });

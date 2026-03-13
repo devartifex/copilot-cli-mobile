@@ -27,7 +27,7 @@ test.describe('Responsive — Login screen', () => {
   test('login screen renders on small phone (320x568)', async ({ browser }) => {
     const { page, context } = await openLoginPage(browser, { width: 320, height: 568 });
 
-    await expect(page.locator('.login-card')).toBeVisible();
+    await expect(page.locator('.login-section')).toBeVisible();
     await expect(page.locator('.device-code-text').first()).toBeVisible();
 
     // No horizontal overflow
@@ -40,7 +40,7 @@ test.describe('Responsive — Login screen', () => {
   test('login screen renders on tablet (768x1024)', async ({ browser }) => {
     const { page, context } = await openLoginPage(browser, { width: 768, height: 1024 });
 
-    await expect(page.locator('.login-card')).toBeVisible();
+    await expect(page.locator('.login-section')).toBeVisible();
     await expect(page.locator('.device-code-text').first()).toBeVisible();
 
     await context.close();
@@ -49,7 +49,7 @@ test.describe('Responsive — Login screen', () => {
   test('login screen renders on desktop (1280x800)', async ({ browser }) => {
     const { page, context } = await openLoginPage(browser, { width: 1280, height: 800 });
 
-    await expect(page.locator('.login-card')).toBeVisible();
+    await expect(page.locator('.login-section')).toBeVisible();
 
     await context.close();
   });

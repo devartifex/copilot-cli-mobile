@@ -1,5 +1,6 @@
 import { CopilotClient, defineTool } from '@github/copilot-sdk';
 import type { SessionConfig } from '@github/copilot-sdk';
+import { isIP } from 'node:net';
 import { config } from '../config.js';
 import { z } from 'zod';
 
@@ -43,11 +44,6 @@ export interface CreateSessionOptions {
   configDir?: string;
 }
 
-const BLOCKED_RANGES = ['10.', '172.16.', '172.17.', '172.18.', '172.19.',
-  '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
-  '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',
-  '192.168.', '169.254.'];
-
 function buildZodSchema(params: Record<string, { type: string; description: string }>): z.ZodObject<Record<string, z.ZodTypeAny>> {
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const [name, param] of Object.entries(params)) {
@@ -62,25 +58,87 @@ function buildZodSchema(params: Record<string, { type: string; description: stri
   return z.object(shape);
 }
 
-function validateToolUrl(toolName: string, webhookUrl: string): void {
-  const url = new URL(webhookUrl);
-  const isLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-  if (!isLocalhost && url.protocol !== 'https:') {
-    throw new Error(`Tool "${toolName}": HTTPS required for non-localhost URLs`);
+function isPrivateIpv4(hostname: string): boolean {
+  const octets = hostname.split('.').map((segment) => Number.parseInt(segment, 10));
+  if (octets.length !== 4 || octets.some((segment) => Number.isNaN(segment) || segment < 0 || segment > 255)) {
+    return false;
   }
-  if (BLOCKED_RANGES.some((r) => url.hostname.startsWith(r))) {
-    throw new Error(`Tool "${toolName}": internal network URLs are not allowed`);
+
+  const [first, second] = octets;
+  return first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168);
+}
+
+function isPrivateIpv6(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  if (normalized === '::' || normalized === '::1') {
+    return true;
+  }
+
+  const firstSegment = normalized.split(':').find((segment) => segment.length > 0);
+  if (!firstSegment) {
+    return false;
+  }
+
+  const firstHextet = Number.parseInt(firstSegment, 16);
+  if (Number.isNaN(firstHextet)) {
+    return false;
+  }
+
+  return (firstHextet & 0xfe00) === 0xfc00 || (firstHextet & 0xffc0) === 0xfe80;
+}
+
+function isBlockedHostname(hostname: string): boolean {
+  const normalized = hostname.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+
+  if (normalized === 'localhost' || normalized.endsWith('.localhost') || normalized === '0.0.0.0') {
+    return true;
+  }
+
+  switch (isIP(normalized)) {
+    case 4:
+      return isPrivateIpv4(normalized);
+    case 6:
+      return isPrivateIpv6(normalized);
+    default:
+      return false;
   }
 }
 
-function validateMcpServerUrl(name: string, serverUrl: string): void {
-  const url = new URL(serverUrl);
+function validateOutboundUrl(kind: 'Tool' | 'MCP server', name: string, rawUrl: string): void {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error(`${kind} "${name}": invalid URL`);
+  }
+
   if (url.protocol !== 'https:') {
-    throw new Error(`MCP server "${name}": HTTPS required`);
+    throw new Error(`${kind} "${name}": HTTPS required`);
   }
-  if (BLOCKED_RANGES.some((r) => url.hostname.startsWith(r))) {
-    throw new Error(`MCP server "${name}": internal network URLs are not allowed`);
+
+  if (url.username || url.password) {
+    throw new Error(`${kind} "${name}": auth credentials in URLs are not allowed`);
   }
+
+  if (isBlockedHostname(url.hostname)) {
+    throw new Error(`${kind} "${name}": internal network URLs are not allowed`);
+  }
+}
+
+function validateToolUrl(toolName: string, webhookUrl: string): void {
+  validateOutboundUrl('Tool', toolName, webhookUrl);
+}
+
+function validateMcpServerUrl(name: string, serverUrl: string): void {
+  validateOutboundUrl('MCP server', name, serverUrl);
 }
 
 function buildUserMcpServers(servers?: McpServerInput[]): Record<string, unknown> {

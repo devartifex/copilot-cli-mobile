@@ -16,8 +16,12 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
     "clean": "rm -rf build dist .svelte-kit",
-    "postinstall": "node scripts/patch-sdk.mjs"
+    "postinstall": "node scripts/patch-sdk.mjs",
+    "prepare": "husky"
   },
   "keywords": [
     "copilot",
@@ -48,16 +52,28 @@
     "vite": "^7.3.1",
     "ws": "^8.18.0"
   },
+  "lint-staged": {
+    "*.{ts,svelte}": [
+      "vitest related --run"
+    ]
+  },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
     "@types/dompurify": "^3.0.5",
     "@types/express-session": "^1.18.0",
     "@types/node": "^20.17.0",
     "@types/session-file-store": "^1.2.6",
     "@types/ws": "^8.5.13",
+    "@vitest/coverage-v8": "^4.1.0",
+    "husky": "^9.1.7",
+    "jsdom": "^28.1.0",
+    "lint-staged": "^16.3.3",
     "svelte-check": "^4.4.5",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0"
   }
 }

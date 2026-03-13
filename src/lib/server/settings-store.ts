@@ -1,6 +1,6 @@
-import { readFile, writeFile, mkdir, rename } from 'fs/promises';
-import { join, dirname } from 'path';
-import { tmpdir } from 'os';
+import { randomUUID } from 'node:crypto';
+import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import { config } from './config.js';
 
 interface PersistedSettings {
@@ -46,8 +46,9 @@ export async function saveUserSettings(username: string, settings: PersistedSett
 	const dir = dirname(filePath);
 	await mkdir(dir, { recursive: true });
 
-	// Atomic write: write to temp file then rename
-	const tmpFile = join(tmpdir(), `settings-${sanitizeUsername(username)}-${Date.now()}.tmp`);
+	// Atomic write: write to a sibling temp file, then rename into place.
+	const safeUsername = sanitizeUsername(username);
+	const tmpFile = join(dir, `.${safeUsername}.${Date.now()}-${randomUUID()}.tmp`);
 	await writeFile(tmpFile, data, 'utf-8');
 	await rename(tmpFile, filePath);
 }

@@ -34,3 +34,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Run unit tests with coverage
+        run: npm run test:unit:coverage
+
+      # TODO: Add Playwright E2E tests in a future PR once CI installs browser binaries
+      # and starts the SvelteKit server for the test run environment.

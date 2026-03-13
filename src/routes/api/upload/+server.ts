@@ -61,6 +61,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			continue;
 		}
 
+		const hasUnsafePath =
+			entry.name !== basename(entry.name) ||
+			entry.name.includes('\\') ||
+			/(^|[\\/])\.\.([\\/]|$)/.test(entry.name);
+		if (hasUnsafePath) {
+			await rm(uploadDir, { recursive: true, force: true });
+			return error(400, 'Invalid file path');
+		}
+
 		const safeName = sanitizeFilename(entry.name);
 		const ext = getExtension(safeName);
 

@@ -17,3 +17,4 @@ bundled-session-store.db
 
 bundled-session-store.db-shm
 bundled-session-store.db-wal
+coverage/

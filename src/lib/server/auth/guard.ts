@@ -28,12 +28,27 @@ export function checkAuth(session: SessionData | null | undefined): AuthResult {
   }
 
   const authTime = session.githubAuthTime;
-  if (authTime && Date.now() - authTime > config.tokenMaxAge) {
+  if (typeof authTime === 'number' && Date.now() - authTime > config.tokenMaxAge) {
     logSecurity('info', 'token_expired', {
       user: session.githubUser?.login,
       reason: 'max_age_exceeded',
     });
     return { authenticated: false, user: null, error: 'Session expired. Please sign in again.' };
+  }
+
+  if (config.allowedUsers.length > 0) {
+    const login = session.githubUser?.login?.trim().toLowerCase();
+
+    if (!login || !config.allowedUsers.includes(login)) {
+      logSecurity('warn', 'auth_denied_not_allowed', {
+        user: session.githubUser?.login,
+      });
+      return {
+        authenticated: false,
+        user: null,
+        error: 'Your GitHub account is not authorized to use this application.',
+      };
+    }
   }
 
   return { authenticated: true, user: session.githubUser ?? null };

@@ -320,6 +320,8 @@ export interface PlanChangedMessage {
 
 export interface PlanUpdatedMessage {
   type: 'plan_updated';
+  content?: string;
+  path?: string;
 }
 
 export interface PlanDeletedMessage {

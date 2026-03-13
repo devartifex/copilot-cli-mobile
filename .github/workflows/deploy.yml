@@ -29,6 +29,10 @@ jobs:
         run: az acr login --name ${{ secrets.ACR_NAME }}
 
       - name: Build and push Docker image
+        # NOTE: CI builds won't include local CLI sessions since ~/.copilot
+        # is not available in the runner. For CLI session sync, either:
+        #   1. Deploy locally with `azd up` (auto-bundles via predeploy hook)
+        #   2. Use `npm run sync:push` to push sessions to a running instance
         run: |
           docker build -t ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
           docker tag ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \

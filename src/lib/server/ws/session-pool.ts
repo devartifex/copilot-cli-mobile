@@ -3,7 +3,7 @@ import type { CopilotClient } from '@github/copilot-sdk';
 import { config } from '../config.js';
 
 const MAX_BUFFER_SIZE = 500;
-const TAB_ID_PATTERN = /^[a-f0-9-]{1,36}$/i;
+const TAB_ID_PATTERN = /^[a-z0-9_-]{1,64}$/i;
 
 export interface PoolEntry {
   client: CopilotClient;

@@ -2,6 +2,12 @@ name: copilot-unleashed
 metadata:
   template: copilot-unleashed@2.0.0
 
+hooks:
+  predeploy:
+    shell: sh
+    run: node scripts/bundle-sessions.mjs
+    continueOnError: true
+
 services:
   web:
     project: .

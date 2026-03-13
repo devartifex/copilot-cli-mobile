@@ -4,7 +4,11 @@ COPY package.json package-lock.json ./
 COPY scripts/ scripts/
 RUN npm ci
 COPY . .
-RUN npm run build && npm prune --omit=dev
+RUN npm run build \
+ && npm prune --omit=dev \
+ && mkdir -p /tmp/copilot-config/session-state \
+ && cp -a bundled-sessions/. /tmp/copilot-config/session-state/ \
+ && if [ -f bundled-session-store.db ]; then cp bundled-session-store.db /tmp/copilot-config/session-store.db; fi
 
 FROM node:24-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git && rm -rf /var/lib/apt/lists/*
@@ -23,8 +27,8 @@ ENV HOME=/home/node
 RUN npm install -g @github/copilot
 RUN mkdir -p /home/node/.copilot/session-state /data/sessions /data/settings && chown -R node:node /home/node /data
 
-# Copy bundled CLI sessions if they were prepared with scripts/bundle-sessions.mjs
-COPY --chown=node:node bundled-sessions/ /home/node/.copilot/session-state/
+# Copy bundled CLI session data if it was prepared with scripts/bundle-sessions.mjs
+COPY --from=builder --chown=node:node /tmp/copilot-config/ /home/node/.copilot/
 ENV COPILOT_CONFIG_DIR=/home/node/.copilot
 
 EXPOSE 3000

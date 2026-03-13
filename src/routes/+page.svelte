@@ -109,6 +109,17 @@
     }
   });
 
+  // Auto-refresh session list while the panel is open
+  $effect(() => {
+    if (!sessionsOpen) return;
+
+    const interval = setInterval(() => {
+      wsStore.listSessions();
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  });
+
   // ── Helpers ────────────────────────────────────────────────────────────
   function requestNewSession(): void {
     const model = settings.selectedModel || 'gpt-4.1';

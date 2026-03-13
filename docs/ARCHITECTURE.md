@@ -105,6 +105,7 @@ src/
 │   │   ├── models/+server.ts         # GET: list models (authed)
 │   │   ├── version/+server.ts        # GET: SDK version
 │   │   ├── upload/+server.ts         # POST: file upload (multipart)
+│   │   ├── sessions/sync/+server.ts  # GET/POST: session delta sync (Bearer auth)
 │   │   └── client-error/+server.ts   # POST: client error reporting
 │   └── health/+server.ts             # GET: health check
 

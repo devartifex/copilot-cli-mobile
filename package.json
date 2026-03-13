@@ -12,6 +12,7 @@
     "dev:down": "docker compose down",
     "preview": "npm run build && node --env-file=.env server.js",
     "bundle-sessions": "node scripts/bundle-sessions.mjs",
+    "sync:push": "node scripts/sync-push.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",

@@ -222,13 +222,6 @@ export function createChatStore(wsStore: WsStore): ChatStore {
         break;
 
       case 'turn_end':
-        notify('Response ready', {
-          body: currentStreamContent.trim().slice(0, 100) || undefined,
-          tag: 'response-ready',
-        });
-        finalizeStream();
-        break;
-
       case 'done':
         notify('Response ready', {
           body: currentStreamContent.trim().slice(0, 100) || undefined,
@@ -317,19 +310,6 @@ export function createChatStore(wsStore: WsStore): ChatStore {
         break;
 
       case 'user_input_request':
-        pendingUserInput = {
-          pending: true,
-          question: msg.question,
-          choices: msg.choices,
-          allowFreeform: msg.allowFreeform,
-        };
-        notify('Copilot is asking you something', {
-          body: msg.question,
-          tag: 'user-input',
-          requireInteraction: true,
-        });
-        break;
-
       case 'elicitation_requested':
         pendingUserInput = {
           pending: true,

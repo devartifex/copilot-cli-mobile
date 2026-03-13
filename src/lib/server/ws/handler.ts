@@ -993,6 +993,16 @@ export function setupWebSocket(
                 // Non-critical: mode will default to interactive on client
               }
 
+              // Read and send the restored session's plan to the client
+              try {
+                const planResult = await connectionEntry.session.rpc.plan.read();
+                if (planResult?.exists) {
+                  poolSend(connectionEntry, { type: 'plan', exists: true, content: planResult.content, path: planResult.path });
+                }
+              } catch {
+                // Non-critical: plan panel will stay hidden
+              }
+
               poolSend(connectionEntry, { type: 'session_resumed', sessionId });
             } catch (err: any) {
               console.error('Resume session error:', err.message);

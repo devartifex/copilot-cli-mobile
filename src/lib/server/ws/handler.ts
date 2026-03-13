@@ -123,17 +123,21 @@ function wireSessionEvents(session: any, entry: PoolEntry, sessionId?: string): 
   });
   session.on('session.plan_changed', (event: any) => {
     poolSend(entry, { type: 'plan_changed', content: event.data?.content, path: event.data?.path });
-    // Persist plan changes to disk for CLI bidirectional sync
-    if (sessionId) {
-      session.rpc.plan.read()
-        .then((plan: { exists?: boolean; content?: string }) => {
-          if (plan?.exists && plan.content != null) {
+    // Read the full plan to sync UI + persist to disk
+    session.rpc.plan.read()
+      .then((plan: { exists?: boolean; content?: string; path?: string }) => {
+        if (plan?.exists && plan.content != null) {
+          // Send full plan to UI so the panel stays in sync
+          poolSend(entry, { type: 'plan', exists: true, content: plan.content, path: plan.path });
+          // Persist plan changes to disk for CLI bidirectional sync
+          if (sessionId) {
             const sessionDir = join(getSessionStateDir(), sessionId);
-            return writeFile(join(sessionDir, 'plan.md'), plan.content, 'utf-8');
+            writeFile(join(sessionDir, 'plan.md'), plan.content, 'utf-8')
+              .catch((err: Error) => console.warn(`[PLAN] Failed to sync plan.md for ${sessionId}:`, err.message));
           }
-        })
-        .catch((err: Error) => console.warn(`[PLAN] Failed to sync plan.md for ${sessionId}:`, err.message));
-    }
+        }
+      })
+      .catch((err: Error) => console.warn(`[PLAN] Failed to read plan:`, err.message));
   });
   session.on('session.compaction_start', () => { poolSend(entry, { type: 'compaction_start' }); });
   session.on('session.compaction_complete', (event: any) => {

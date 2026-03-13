@@ -18,18 +18,28 @@
   let searchQuery = $state('');
   let selectedSessionId = $state<string | null>(null);
 
+  function sessionTime(s: SessionSummary): number {
+    return s.updatedAt ? new Date(s.updatedAt).getTime() : 0;
+  }
+
   const filteredSessions = $derived.by(() => {
-    if (!searchQuery.trim()) return sessions;
-    const q = searchQuery.toLowerCase();
-    return sessions.filter((s) =>
-      (s.title ?? s.id).toLowerCase().includes(q) ||
-      s.repository?.toLowerCase().includes(q) ||
-      s.branch?.toLowerCase().includes(q) ||
-      s.cwd?.toLowerCase().includes(q),
-    );
+    const list = !searchQuery.trim()
+      ? [...sessions]
+      : sessions.filter((s) => {
+          const q = searchQuery.toLowerCase();
+          return (
+            (s.title ?? s.id).toLowerCase().includes(q) ||
+            s.repository?.toLowerCase().includes(q) ||
+            s.branch?.toLowerCase().includes(q) ||
+            s.cwd?.toLowerCase().includes(q)
+          );
+        });
+    // Sort by updatedAt descending (newest first)
+    list.sort((a, b) => sessionTime(b) - sessionTime(a));
+    return list;
   });
 
-  // Group sessions by repository
+  // Group sessions by repository, sorted newest-first within each group
   const groupedSessions = $derived.by(() => {
     const groups = new Map<string, SessionSummary[]>();
     for (const s of filteredSessions) {
@@ -41,7 +51,17 @@
         groups.set(key, [s]);
       }
     }
-    return groups;
+
+    // Sort sessions within each group by updatedAt descending
+    for (const group of groups.values()) {
+      group.sort((a, b) => sessionTime(b) - sessionTime(a));
+    }
+
+    // Sort groups so the repo with the most recent session comes first
+    const sorted = new Map(
+      [...groups.entries()].sort(([, a], [, b]) => sessionTime(b[0]) - sessionTime(a[0])),
+    );
+    return sorted;
   });
 
   // Determine whether to show groups (only if multiple repos exist)

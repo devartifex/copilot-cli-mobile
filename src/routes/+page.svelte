@@ -83,9 +83,12 @@
           wsStore.listModels();
         }
 
-        // Auto-request models on session resumed
+        // Auto-request models, plan, tools, and agents on session resumed
         if (msg.type === 'session_resumed') {
           wsStore.listModels();
+          wsStore.getPlan();
+          wsStore.listTools();
+          wsStore.listAgents();
         }
 
         // Sync mode from SDK to settings on mode_changed (covers resumed sessions)

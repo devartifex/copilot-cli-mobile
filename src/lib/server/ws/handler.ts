@@ -997,6 +997,16 @@ export function setupWebSocket(
                 // Non-critical: mode will default to interactive on client
               }
 
+              // Restore the plan INTO the SDK so the agent's tools can access it
+              if (detail?.plan) {
+                try {
+                  await connectionEntry.session.rpc.plan.update({ content: detail.plan });
+                  console.log(`[RESUME] Plan restored into SDK for session ${sessionId}`);
+                } catch (planErr: any) {
+                  console.warn(`[RESUME] Failed to restore plan into SDK: ${planErr.message}`);
+                }
+              }
+
               // Read and send the restored session's plan to the client
               try {
                 const planResult = await connectionEntry.session.rpc.plan.read();

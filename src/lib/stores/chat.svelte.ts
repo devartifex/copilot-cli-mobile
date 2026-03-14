@@ -547,13 +547,25 @@ export function createChatStore(wsStore: WsStore): ChatStore {
         break;
 
       case 'tool_partial_result':
-        // Partial tool output — update the existing tool call if tracked
+        messages = messages.map(m =>
+          m.toolCallId === msg.toolCallId
+            ? {
+                ...m,
+                toolProgressMessages: [...(m.toolProgressMessages ?? []), msg.partialOutput],
+              }
+            : m,
+        );
         break;
 
       case 'context_changed':
+        addInfoMessage(
+          `Context: ${msg.repository ?? msg.cwd}` +
+          (msg.branch ? ` (${msg.branch})` : ''),
+        );
         break;
 
       case 'workspace_file_changed':
+        addInfoMessage(`Workspace file ${msg.operation}d: ${msg.path}`);
         break;
     }
   }

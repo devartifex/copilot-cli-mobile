@@ -535,14 +535,26 @@ describe('createChatStore', () => {
 
     store.clearMessages();
 
-    // context_changed and workspace_file_changed are accepted without error
+    // context_changed and workspace_file_changed produce info messages
     dispatch(
       store,
       { type: 'context_changed', cwd: '/tmp', gitRoot: '/tmp', repository: 'o/r', branch: 'main' },
       { type: 'workspace_file_changed', path: 'plan.md', operation: 'update' },
+    );
+    expect(store.messages).toEqual([
+      expect.objectContaining({ role: 'info', content: 'Context: o/r (main)' }),
+      expect.objectContaining({ role: 'info', content: 'Workspace file updated: plan.md' }),
+    ]);
+
+    store.clearMessages();
+
+    // tool_partial_result appends to tool progress messages
+    dispatch(
+      store,
+      { type: 'tool_start', toolCallId: 'tc-1', toolName: 'bash', mcpServerName: undefined, mcpToolName: undefined },
       { type: 'tool_partial_result', toolCallId: 'tc-1', partialOutput: 'partial data' },
     );
-    // These events don't produce visible messages but should not throw
-    expect(store.messages).toEqual([]);
+    const toolMsg = store.messages.find(m => m.toolCallId === 'tc-1');
+    expect(toolMsg?.toolProgressMessages).toEqual(['partial data']);
   });
 });

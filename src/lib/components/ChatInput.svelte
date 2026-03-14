@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import type { Attachment, ConnectionState, FileAttachment, SessionMode, UserInputState } from '$lib/types/index.js';
+  import { isImageFile, hasImageAttachments as checkImageAttachments } from '$lib/utils/image.js';
 
   interface Props {
     connectionState: ConnectionState;
@@ -8,6 +9,7 @@
     isStreaming: boolean;
     isWaiting: boolean;
     mode: SessionMode;
+    supportsVision: boolean;
     pendingUserInput: UserInputState | null;
     onSend: (content: string, attachments?: Attachment[]) => void;
     onAbort: () => void;
@@ -31,6 +33,7 @@
     isStreaming,
     isWaiting,
     mode,
+    supportsVision,
     pendingUserInput,
     onSend,
     onAbort,
@@ -84,6 +87,10 @@
 
   const showSteeringIndicator = $derived(
     !pendingUserInput && isStreaming && inputValue.trim().length > 0,
+  );
+
+  const hasImageAttachments = $derived(
+    checkImageAttachments(selectedFiles),
   );
 
   const showSlashHint = $derived(
@@ -419,12 +426,29 @@
       <div class="file-preview-row">
         {#each selectedFiles as file, i (file.name + i)}
           <div class="file-chip">
+            {#if isImageFile(file)}
+              <img
+                class="file-chip-thumb"
+                src={URL.createObjectURL(file)}
+                alt={file.name}
+                onload={(e) => URL.revokeObjectURL((e.currentTarget as HTMLImageElement).src)}
+              />
+            {:else}
+              <span class="file-chip-icon" aria-hidden="true">📄</span>
+            {/if}
             <span class="file-chip-name">{file.name}</span>
-            <span class="file-chip-size">{formatFileSize(file.size)}</span>
+            {#if !isImageFile(file)}
+              <span class="file-chip-size">{formatFileSize(file.size)}</span>
+            {/if}
             <button class="file-chip-remove" onclick={() => removeFile(i)} aria-label="Remove {file.name}">×</button>
           </div>
         {/each}
       </div>
+      {#if hasImageAttachments && !supportsVision}
+        <div class="vision-warning" role="alert">
+          ⚠️ Current model may not support image analysis
+        </div>
+      {/if}
     {/if}
 
     <textarea
@@ -1092,5 +1116,26 @@
 
   .file-chip-remove:active {
     color: var(--red);
+  }
+
+  .file-chip-icon {
+    flex-shrink: 0;
+    font-size: 0.9em;
+  }
+
+  .file-chip-thumb {
+    width: 28px;
+    height: 28px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .vision-warning {
+    padding: 0 var(--sp-3) var(--sp-2);
+    color: var(--yellow);
+    font-family: var(--font-mono);
+    font-size: 0.75em;
+    line-height: 1.4;
   }
 </style>

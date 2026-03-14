@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { execSync } from 'node:child_process';
 import { approveAll } from '@github/copilot-sdk';
 import { createCopilotClient } from '../copilot/client.js';
-import { createCopilotSession, getAvailableModels } from '../copilot/session.js';
+import { createCopilotSession, getAvailableModels, buildSessionHooks } from '../copilot/session.js';
 import { enrichSessionMetadata, getSessionDetail, getSessionStateDir, listSessionsFromFilesystem, buildSessionContext, deleteSessionFromFilesystem, isValidSessionId } from '../copilot/session-metadata.js';
 import { config } from '../config.js';
 import { logSecurity } from '../security-log.js';
@@ -138,7 +138,7 @@ export async function resolveFileMentions(
 }
 
 /** Parse and validate MCP server entries from a WebSocket message, filtering out disabled servers. */
-export function parseMcpServers(raw: unknown): Array<{ name: string; url: string; type: 'http' | 'sse'; headers: Record<string, string>; tools: string[] }> | undefined {
+export function parseMcpServers(raw: unknown): Array<{ name: string; url: string; type: 'http' | 'sse'; headers: Record<string, string>; tools: string[]; timeout?: number }> | undefined {
   if (!Array.isArray(raw)) return undefined;
   const servers = raw
     .filter((s: unknown) => {
@@ -162,6 +162,9 @@ export function parseMcpServers(raw: unknown): Array<{ name: string; url: string
         type: obj.type as 'http' | 'sse',
         headers: obj.headers as Record<string, string>,
         tools: (obj.tools as unknown[]).filter((t): t is string => typeof t === 'string'),
+        ...(typeof obj.timeout === 'number' && obj.timeout > 0 && obj.timeout <= 300000
+          ? { timeout: Math.round(obj.timeout) }
+          : {}),
       };
     });
   return servers.length > 0 ? servers : undefined;
@@ -1196,6 +1199,7 @@ export function setupWebSocket(
                   onPermissionRequest: (await import('@github/copilot-sdk')).approveAll,
                   streaming: true,
                   onUserInputRequest: makeUserInputHandler(connectionEntry),
+                  hooks: buildSessionHooks((message) => poolSend(connectionEntry, message)),
                   configDir: resolvedConfigDir,
                   mcpServers: mcpServersConfig as any,
                   ...(detail?.plan && {

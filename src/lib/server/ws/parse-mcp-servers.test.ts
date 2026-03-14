@@ -89,4 +89,48 @@ describe('parseMcpServers', () => {
 
     expect(result![0].tools).toEqual(['valid', 'also-valid']);
   });
+
+  it('includes valid timeout in parsed server', () => {
+    const result = parseMcpServers([
+      { name: 'with-timeout', url: 'https://a.example.com/mcp', type: 'http', headers: {}, tools: [], timeout: 60000 },
+    ]);
+
+    expect(result![0].timeout).toBe(60000);
+  });
+
+  it('rounds non-integer timeout to nearest integer', () => {
+    const result = parseMcpServers([
+      { name: 's1', url: 'https://a.example.com/mcp', type: 'http', headers: {}, tools: [], timeout: 5000.7 },
+    ]);
+
+    expect(result![0].timeout).toBe(5001);
+  });
+
+  it('excludes timeout exceeding max (300000ms)', () => {
+    const result = parseMcpServers([
+      { name: 's1', url: 'https://a.example.com/mcp', type: 'http', headers: {}, tools: [], timeout: 500000 },
+    ]);
+
+    expect(result![0].timeout).toBeUndefined();
+  });
+
+  it('excludes non-number timeout', () => {
+    const result = parseMcpServers([
+      { name: 's1', url: 'https://a.example.com/mcp', type: 'http', headers: {}, tools: [], timeout: 'fast' },
+    ]);
+
+    expect(result![0].timeout).toBeUndefined();
+  });
+
+  it('excludes zero and negative timeout', () => {
+    const zeroResult = parseMcpServers([
+      { name: 's1', url: 'https://a.example.com/mcp', type: 'http', headers: {}, tools: [], timeout: 0 },
+    ]);
+    expect(zeroResult![0].timeout).toBeUndefined();
+
+    const negativeResult = parseMcpServers([
+      { name: 's2', url: 'https://b.example.com/mcp', type: 'http', headers: {}, tools: [], timeout: -1000 },
+    ]);
+    expect(negativeResult![0].timeout).toBeUndefined();
+  });
 });

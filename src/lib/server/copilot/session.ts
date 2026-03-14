@@ -29,6 +29,7 @@ export interface McpServerInput {
   type: 'http' | 'sse';
   headers: Record<string, string>;
   tools: string[];
+  timeout?: number;
 }
 
 export interface CreateSessionOptions {
@@ -163,6 +164,7 @@ function buildUserMcpServers(servers?: McpServerInput[]): Record<string, unknown
       url: server.url,
       headers: server.headers,
       tools: server.tools.length > 0 ? server.tools : ['*'],
+      ...(server.timeout && server.timeout > 0 ? { timeout: server.timeout } : {}),
     };
   }
   return result;
@@ -196,6 +198,9 @@ export function buildSessionHooks(onHookEvent: HookEventCallback): SessionConfig
     },
     onPostToolUse: (input) => {
       onHookEvent({ type: 'hook_post_tool', toolName: input.toolName, toolArgs: input.toolArgs });
+    },
+    onUserPromptSubmitted: (input) => {
+      onHookEvent({ type: 'hook_user_prompt', prompt: input.prompt });
     },
     onSessionStart: (input) => {
       onHookEvent({ type: 'hook_session_start', source: input.source });

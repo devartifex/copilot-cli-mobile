@@ -245,6 +245,7 @@ describe('createSettingsStore', () => {
           customAgents: [],
           mcpServers: [],
           disabledSkills: [],
+          infiniteSessions: { enabled: true, backgroundThreshold: 0.80, bufferThreshold: 0.95 },
         },
       }),
     });

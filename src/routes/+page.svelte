@@ -148,13 +148,19 @@
   }
 
   function handleSend(content: string, attachments?: Array<{ path: string; name: string; type: string }>): void {
-    if (content.startsWith('/fleet ')) {
-      const prompt = content.slice(7).trim();
-      if (prompt) {
+    const trimmed = content.trim();
+
+    // Handle /fleet command — with or without trailing space
+    if (trimmed === '/fleet' || trimmed.startsWith('/fleet ')) {
+      const prompt = trimmed.slice(6).trim();
+      if (!prompt) {
         chatStore.addUserMessage(content);
-        wsStore.send({ type: 'start_fleet', prompt });
+        chatStore.handleServerMessage({ type: 'error', message: 'Usage: /fleet <prompt> — describe the task for parallel agents' } as any);
         return;
       }
+      chatStore.addUserMessage(content);
+      wsStore.send({ type: 'start_fleet', prompt });
+      return;
     }
 
     chatStore.addUserMessage(content);
@@ -293,6 +299,10 @@
         onAbort={() => wsStore.abort()}
         onSetMode={handleSetMode}
         onUserInputResponse={handleUserInputResponse}
+        onFleet={(prompt) => {
+          chatStore.addUserMessage(`/fleet ${prompt}`);
+          wsStore.send({ type: 'start_fleet', prompt });
+        }}
       />
     </div>
 

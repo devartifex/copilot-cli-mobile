@@ -1,0 +1,41 @@
+name: 🔌 SDK Feature
+description: Track a Copilot SDK feature implementation or verification
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: "Track implementation/verification of a @github/copilot-sdk feature."
+  - type: input
+    id: sdk_feature
+    attributes:
+      label: SDK Feature Name
+      placeholder: "e.g., Hooks, MCP Servers, Image Input"
+    validations:
+      required: true
+  - type: input
+    id: sdk_doc
+    attributes:
+      label: SDK Documentation Link
+      placeholder: "https://github.com/github/copilot-sdk/blob/main/docs/features/..."
+  - type: dropdown
+    id: status
+    attributes:
+      label: Current Implementation Status
+      options:
+        - Not implemented
+        - Partially implemented
+        - Implemented but needs verification
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Implementation Tasks
+      description: What needs to be done to complete this feature.
+    validations:
+      required: true
+  - type: textarea
+    id: affected_files
+    attributes:
+      label: Affected Files
+      description: Which files need to be created or modified.

@@ -15,7 +15,7 @@ vi.mock('../config.js', () => ({
   },
 }));
 
-import { createCopilotSession, getAvailableModels } from './session.js';
+import { createCopilotSession, getAvailableModels, buildSessionHooks } from './session.js';
 
 interface ClientMock {
   createSession: ReturnType<typeof vi.fn>;
@@ -398,6 +398,182 @@ describe('createCopilotSession', () => {
 
     const config = getSessionConfig(client);
     expect(config.customAgents).toEqual(customAgents);
+  });
+
+  it('supports SSE-type MCP servers alongside HTTP servers', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+      mcpServers: [
+        {
+          name: 'http-server',
+          url: 'https://api.example.com/mcp',
+          type: 'http',
+          headers: { 'X-Api-Key': 'key1' },
+          tools: ['search'],
+        },
+        {
+          name: 'sse-server',
+          url: 'https://stream.example.com/events',
+          type: 'sse',
+          headers: { Authorization: 'Bearer tok' },
+          tools: [],
+        },
+      ],
+    });
+
+    const mcpServers = getSessionConfig(client).mcpServers as Record<string, Record<string, unknown>>;
+
+    // GitHub server always present
+    expect(mcpServers.github).toBeDefined();
+
+    // HTTP server preserved as-is
+    expect(mcpServers['http-server']).toEqual({
+      type: 'http',
+      url: 'https://api.example.com/mcp',
+      headers: { 'X-Api-Key': 'key1' },
+      tools: ['search'],
+    });
+
+    // SSE server with empty tools defaults to wildcard
+    expect(mcpServers['sse-server']).toEqual({
+      type: 'sse',
+      url: 'https://stream.example.com/events',
+      headers: { Authorization: 'Bearer tok' },
+      tools: ['*'],
+    });
+  });
+
+  it('always includes GitHub MCP server with the provided token', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'my-gh-token-123');
+
+    const mcpServers = getSessionConfig(client).mcpServers as Record<string, Record<string, unknown>>;
+    expect(mcpServers.github).toEqual({
+      type: 'http',
+      url: 'https://api.githubcopilot.com/mcp/x/all',
+      headers: { Authorization: 'Bearer my-gh-token-123' },
+      tools: ['*'],
+    });
+  });
+
+  it('omits user MCP servers when none are provided', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+      mcpServers: [],
+    });
+
+    const mcpServers = getSessionConfig(client).mcpServers as Record<string, Record<string, unknown>>;
+    expect(Object.keys(mcpServers)).toEqual(['github']);
+  });
+
+  it('wires session hooks when onHookEvent callback is provided', async () => {
+    const client = createClientMock();
+    const onHookEvent = vi.fn();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+      onHookEvent,
+    });
+
+    const config = getSessionConfig(client);
+    expect(config.hooks).toBeDefined();
+    expect(config.hooks).toHaveProperty('onPreToolUse');
+    expect(config.hooks).toHaveProperty('onPostToolUse');
+    expect(config.hooks).toHaveProperty('onSessionStart');
+    expect(config.hooks).toHaveProperty('onSessionEnd');
+    expect(config.hooks).toHaveProperty('onErrorOccurred');
+  });
+
+  it('omits hooks when onHookEvent is not provided', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token');
+
+    const config = getSessionConfig(client);
+    expect(config.hooks).toBeUndefined();
+  });
+});
+
+describe('buildSessionHooks', () => {
+  it('sends hook_pre_tool message with tool name and args', () => {
+    const callback = vi.fn();
+    const hooks = buildSessionHooks(callback);
+
+    hooks!.onPreToolUse!(
+      { toolName: 'bash', toolArgs: { command: 'ls' }, timestamp: 1, cwd: '/tmp' },
+      { sessionId: 's1' },
+    );
+
+    expect(callback).toHaveBeenCalledWith({
+      type: 'hook_pre_tool',
+      toolName: 'bash',
+      toolArgs: { command: 'ls' },
+    });
+  });
+
+  it('sends hook_post_tool message with tool name and args', () => {
+    const callback = vi.fn();
+    const hooks = buildSessionHooks(callback);
+
+    hooks!.onPostToolUse!(
+      { toolName: 'read', toolArgs: { path: '/file' }, toolResult: { content: 'ok' } as any, timestamp: 1, cwd: '/tmp' },
+      { sessionId: 's1' },
+    );
+
+    expect(callback).toHaveBeenCalledWith({
+      type: 'hook_post_tool',
+      toolName: 'read',
+      toolArgs: { path: '/file' },
+    });
+  });
+
+  it('sends hook_session_start message with source', () => {
+    const callback = vi.fn();
+    const hooks = buildSessionHooks(callback);
+
+    hooks!.onSessionStart!(
+      { source: 'new', timestamp: 1, cwd: '/tmp' },
+      { sessionId: 's1' },
+    );
+
+    expect(callback).toHaveBeenCalledWith({
+      type: 'hook_session_start',
+      source: 'new',
+    });
+  });
+
+  it('sends hook_session_end message with reason', () => {
+    const callback = vi.fn();
+    const hooks = buildSessionHooks(callback);
+
+    hooks!.onSessionEnd!(
+      { reason: 'complete', timestamp: 1, cwd: '/tmp' },
+      { sessionId: 's1' },
+    );
+
+    expect(callback).toHaveBeenCalledWith({
+      type: 'hook_session_end',
+      reason: 'complete',
+    });
+  });
+
+  it('sends hook_error message with error details', () => {
+    const callback = vi.fn();
+    const hooks = buildSessionHooks(callback);
+
+    hooks!.onErrorOccurred!(
+      { error: 'timeout', errorContext: 'tool_execution', recoverable: true, timestamp: 1, cwd: '/tmp' },
+      { sessionId: 's1' },
+    );
+
+    expect(callback).toHaveBeenCalledWith({
+      type: 'hook_error',
+      error: 'timeout',
+      errorContext: 'tool_execution',
+      recoverable: true,
+    });
   });
 });
 

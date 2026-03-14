@@ -1,0 +1,30 @@
+# Default owner for all files
+* @devartifex
+
+# Backend / SDK integration
+/src/lib/server/ @devartifex
+/server.js @devartifex
+
+# Frontend components & stores
+/src/lib/components/ @devartifex
+/src/lib/stores/ @devartifex
+
+# Infrastructure & deployment
+/Dockerfile @devartifex
+/docker-compose.yml @devartifex
+/infra/ @devartifex
+
+# CI/CD & GitHub config
+/.github/workflows/ @devartifex
+/.github/agents/ @devartifex
+/.github/instructions/ @devartifex
+
+# Documentation
+/docs/ @devartifex
+
+# Tests
+/tests/ @devartifex
+/playwright.config.ts @devartifex
+
+# Skills
+/skills/ @devartifex

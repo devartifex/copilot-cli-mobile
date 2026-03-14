@@ -22,6 +22,13 @@ export interface SessionDetail {
   isRemote?: boolean;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Validate that a session ID is a well-formed UUID (prevents path traversal) */
+export function isValidSessionId(id: string): boolean {
+  return UUID_RE.test(id);
+}
+
 /** Resolve the session-state root directory */
 export function getSessionStateDir(): string {
   const base = config.copilotConfigDir || join(homedir(), '.copilot');
@@ -113,6 +120,7 @@ export async function enrichSessionMetadata(
 
 /** Get full session detail for the preview panel */
 export async function getSessionDetail(sessionId: string): Promise<SessionDetail | null> {
+  if (!isValidSessionId(sessionId)) return null;
   const sessionDir = join(getSessionStateDir(), sessionId);
   if (!await pathExists(sessionDir)) return null;
 
@@ -216,11 +224,9 @@ export async function listSessionsFromFilesystem(): Promise<FilesystemSession[]>
   }
 
   // UUID pattern — only pick directories that look like session IDs
-  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
   const results = await Promise.all(
     entries
-      .filter((name) => uuidRe.test(name))
+      .filter((name) => isValidSessionId(name))
       .map(async (sessionId): Promise<FilesystemSession | null> => {
         const sessionDir = join(stateDir, sessionId);
 
@@ -267,6 +273,7 @@ export async function listSessionsFromFilesystem(): Promise<FilesystemSession[]>
  * Used as a fallback when resumeSession() fails for bundled/filesystem-only sessions.
  */
 export async function buildSessionContext(sessionId: string): Promise<string | null> {
+  if (!isValidSessionId(sessionId)) return null;
   const sessionDir = join(getSessionStateDir(), sessionId);
   if (!await pathExists(sessionDir)) return null;
 
@@ -339,8 +346,7 @@ export async function buildSessionContext(sessionId: string): Promise<string | n
  * (e.g. bundled or filesystem-only sessions).
  */
 export async function deleteSessionFromFilesystem(sessionId: string): Promise<boolean> {
-  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRe.test(sessionId)) return false;
+  if (!isValidSessionId(sessionId)) return false;
 
   const sessionDir = join(getSessionStateDir(), sessionId);
   if (!await pathExists(sessionDir)) return false;

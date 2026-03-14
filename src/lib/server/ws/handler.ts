@@ -1,11 +1,12 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server, IncomingMessage } from 'http';
 import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { approveAll } from '@github/copilot-sdk';
 import { createCopilotClient } from '../copilot/client.js';
 import { createCopilotSession, getAvailableModels } from '../copilot/session.js';
-import { enrichSessionMetadata, getSessionDetail, getSessionStateDir, listSessionsFromFilesystem, buildSessionContext, deleteSessionFromFilesystem } from '../copilot/session-metadata.js';
+import { enrichSessionMetadata, getSessionDetail, getSessionStateDir, listSessionsFromFilesystem, buildSessionContext, deleteSessionFromFilesystem, isValidSessionId } from '../copilot/session-metadata.js';
 import { config } from '../config.js';
 import { logSecurity } from '../security-log.js';
 import { validateGitHubToken } from '../auth/github.js';
@@ -32,6 +33,43 @@ const VALID_MESSAGE_TYPES = new Set([
 const VALID_MODES = new Set(['interactive', 'plan', 'autopilot']);
 const VALID_REASONING = new Set(['low', 'medium', 'high', 'xhigh']);
 const HEARTBEAT_INTERVAL = 30_000;
+const UPLOAD_DIR_PREFIX = join(tmpdir(), 'copilot-uploads');
+
+/** Validate that an attachment path is an absolute path inside the upload directory (prevents arbitrary file reads). */
+export function isValidAttachmentPath(filePath: string): boolean {
+  const resolved = resolve(filePath);
+  return resolved.startsWith(UPLOAD_DIR_PREFIX + '/');
+}
+
+/** Parse and validate MCP server entries from a WebSocket message, filtering out disabled servers. */
+export function parseMcpServers(raw: unknown): Array<{ name: string; url: string; type: 'http' | 'sse'; headers: Record<string, string>; tools: string[] }> | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const servers = raw
+    .filter((s: unknown) => {
+      if (!s || typeof s !== 'object') return false;
+      const obj = s as Record<string, unknown>;
+      if (obj.enabled === false) return false;
+      return (
+        typeof obj.name === 'string' &&
+        typeof obj.url === 'string' &&
+        (obj.type === 'http' || obj.type === 'sse') &&
+        typeof obj.headers === 'object' && obj.headers !== null &&
+        Array.isArray(obj.tools)
+      );
+    })
+    .slice(0, 10)
+    .map((s: unknown) => {
+      const obj = s as Record<string, unknown>;
+      return {
+        name: obj.name as string,
+        url: obj.url as string,
+        type: obj.type as 'http' | 'sse',
+        headers: obj.headers as Record<string, string>,
+        tools: (obj.tools as unknown[]).filter((t): t is string => typeof t === 'string'),
+      };
+    });
+  return servers.length > 0 ? servers : undefined;
+}
 
 /** Normalize SDK quota snapshots: convert remainingPercentage from 0.0–1.0 to 0–100 and add percentageUsed */
 function normalizeQuotaSnapshots(raw: Record<string, any> | undefined): Record<string, any> | undefined {
@@ -550,31 +588,7 @@ export function setupWebSocket(
 
               const customTools = Array.isArray(msg.customTools) ? msg.customTools.slice(0, 10) : undefined;
 
-              const mcpServers = Array.isArray(msg.mcpServers)
-                ? msg.mcpServers
-                    .filter((s: unknown) => {
-                      if (!s || typeof s !== 'object') return false;
-                      const obj = s as Record<string, unknown>;
-                      return (
-                        typeof obj.name === 'string' &&
-                        typeof obj.url === 'string' &&
-                        (obj.type === 'http' || obj.type === 'sse') &&
-                        typeof obj.headers === 'object' && obj.headers !== null &&
-                        Array.isArray(obj.tools)
-                      );
-                    })
-                    .slice(0, 10)
-                    .map((s: unknown) => {
-                      const obj = s as Record<string, unknown>;
-                      return {
-                        name: obj.name as string,
-                        url: obj.url as string,
-                        type: obj.type as 'http' | 'sse',
-                        headers: obj.headers as Record<string, string>,
-                        tools: (obj.tools as unknown[]).filter((t): t is string => typeof t === 'string'),
-                      };
-                    })
-                : undefined;
+              const mcpServers = parseMcpServers(msg.mcpServers);
 
               const disabledSkills = Array.isArray(msg.disabledSkills)
                 ? msg.disabledSkills.filter((s: unknown) => typeof s === 'string')
@@ -619,6 +633,7 @@ export function setupWebSocket(
                 skillDirectories,
                 disabledSkills,
                 customAgents,
+                onHookEvent: (message) => poolSend(connectionEntry, message),
               });
 
               wireSessionEvents(connectionEntry.session, connectionEntry, connectionEntry.session?.sessionId);
@@ -664,6 +679,15 @@ export function setupWebSocket(
                   .filter((a: unknown) => {
                     const att = a as Record<string, unknown>;
                     return typeof att.path === 'string' && typeof att.name === 'string';
+                  })
+                  .filter((a: unknown) => {
+                    const att = a as Record<string, unknown>;
+                    const path = att.path as string;
+                    if (!isValidAttachmentPath(path)) {
+                      logSecurity('warn', 'ATTACHMENT_PATH_REJECTED', { path });
+                      return false;
+                    }
+                    return true;
                   })
                   .map((a: unknown) => {
                     const att = a as Record<string, unknown>;
@@ -974,6 +998,10 @@ export function setupWebSocket(
               poolSend(connectionEntry, { type: 'error', message: 'Session ID is required' });
               return;
             }
+            if (!isValidSessionId(deleteId)) {
+              poolSend(connectionEntry, { type: 'error', message: 'Invalid session ID format' });
+              return;
+            }
 
             // Prevent deleting the active session
             if (connectionEntry.session?.sessionId === deleteId) {
@@ -1010,6 +1038,10 @@ export function setupWebSocket(
               poolSend(connectionEntry, { type: 'error', message: 'Session ID is required' });
               return;
             }
+            if (!isValidSessionId(detailId)) {
+              poolSend(connectionEntry, { type: 'error', message: 'Invalid session ID format' });
+              return;
+            }
 
             try {
               console.log('[DEBUG get_session_detail] Calling getSessionDetail…');
@@ -1034,6 +1066,10 @@ export function setupWebSocket(
               poolSend(connectionEntry, { type: 'error', message: 'Session ID is required' });
               return;
             }
+            if (!isValidSessionId(sessionId)) {
+              poolSend(connectionEntry, { type: 'error', message: 'Invalid session ID format' });
+              return;
+            }
 
             if (connectionEntry.session) {
               try { await connectionEntry.session.disconnect(); } catch { /* ignore */ }
@@ -1041,6 +1077,7 @@ export function setupWebSocket(
             }
             connectionEntry.userInputResolve = null;
             connectionEntry.permissionResolve = null;
+            connectionEntry.isProcessing = false;
 
             try {
               // start() is idempotent — ensures the SDK has indexed all local sessions
@@ -1051,6 +1088,29 @@ export function setupWebSocket(
               // Read filesystem plan for injection into resumed session context
               const detail = await getSessionDetail(sessionId);
 
+              // Parse MCP servers from the message so resumed sessions retain MCP access
+              const resumeMcpServers = parseMcpServers(msg.mcpServers);
+
+              // Build the full MCP config (GitHub server + user servers)
+              const mcpServersConfig: Record<string, unknown> = {
+                github: {
+                  type: 'http',
+                  url: 'https://api.githubcopilot.com/mcp/x/all',
+                  headers: { Authorization: `Bearer ${githubToken}` },
+                  tools: ['*'],
+                },
+              };
+              if (resumeMcpServers) {
+                for (const s of resumeMcpServers) {
+                  mcpServersConfig[s.name] = {
+                    type: s.type,
+                    url: s.url,
+                    headers: s.headers,
+                    tools: s.tools.length > 0 ? s.tools : ['*'],
+                  };
+                }
+              }
+
               let resumed = false;
 
               // Try native SDK resume first
@@ -1060,6 +1120,7 @@ export function setupWebSocket(
                   streaming: true,
                   onUserInputRequest: makeUserInputHandler(connectionEntry),
                   configDir: resolvedConfigDir,
+                  mcpServers: mcpServersConfig as any,
                   ...(detail?.plan && {
                     systemMessage: {
                       mode: 'append' as const,
@@ -1085,6 +1146,8 @@ export function setupWebSocket(
                   onUserInputRequest: makeUserInputHandler(connectionEntry),
                   permissionMode: 'approve_all',
                   configDir: resolvedConfigDir,
+                  mcpServers: resumeMcpServers,
+                  onHookEvent: (message) => poolSend(connectionEntry, message),
                 });
                 console.log(`[RESUME] Fallback session created for ${sessionId} with context injection`);
               }

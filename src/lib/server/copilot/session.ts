@@ -1,5 +1,7 @@
 import { CopilotClient, defineTool } from '@github/copilot-sdk';
 import type { SessionConfig } from '@github/copilot-sdk';
+
+export type HookEventCallback = (message: Record<string, unknown>) => void;
 import { isIP } from 'node:net';
 import { config } from '../config.js';
 import { z } from 'zod';
@@ -51,6 +53,7 @@ export interface CreateSessionOptions {
     tools?: string[];
     prompt: string;
   }>;
+  onHookEvent?: HookEventCallback;
 }
 
 function buildZodSchema(params: Record<string, { type: string; description: string }>): z.ZodObject<Record<string, z.ZodTypeAny>> {
@@ -186,6 +189,31 @@ function buildCustomTools(customTools: CustomToolDefinition[]) {
   });
 }
 
+export function buildSessionHooks(onHookEvent: HookEventCallback): SessionConfig['hooks'] {
+  return {
+    onPreToolUse: (input) => {
+      onHookEvent({ type: 'hook_pre_tool', toolName: input.toolName, toolArgs: input.toolArgs });
+    },
+    onPostToolUse: (input) => {
+      onHookEvent({ type: 'hook_post_tool', toolName: input.toolName, toolArgs: input.toolArgs });
+    },
+    onSessionStart: (input) => {
+      onHookEvent({ type: 'hook_session_start', source: input.source });
+    },
+    onSessionEnd: (input) => {
+      onHookEvent({ type: 'hook_session_end', reason: input.reason });
+    },
+    onErrorOccurred: (input) => {
+      onHookEvent({
+        type: 'hook_error',
+        error: input.error,
+        errorContext: input.errorContext,
+        recoverable: input.recoverable,
+      });
+    },
+  };
+}
+
 export async function createCopilotSession(
   client: CopilotClient,
   githubToken: string,
@@ -278,6 +306,10 @@ export async function createCopilotSession(
 
   if (options.customAgents && options.customAgents.length > 0) {
     sessionConfig.customAgents = options.customAgents;
+  }
+
+  if (options.onHookEvent) {
+    sessionConfig.hooks = buildSessionHooks(options.onHookEvent);
   }
 
   return client.createSession(sessionConfig);

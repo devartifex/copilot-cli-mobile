@@ -1,0 +1,67 @@
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/lib/server/**'
+          - 'server.js'
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/lib/components/**'
+          - 'src/lib/stores/**'
+          - 'src/app.css'
+          - 'src/app.html'
+
+sdk:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/lib/server/copilot/**'
+
+types:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/lib/types/**'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tests/**'
+          - 'src/**/*.test.ts'
+          - 'playwright.config.ts'
+          - 'vitest.config.ts'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/workflows/**'
+          - 'Dockerfile'
+          - 'docker-compose.yml'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - '*.md'
+          - '.github/*.md'
+
+infrastructure:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'infra/**'
+          - 'azure.yaml'
+
+copilot-config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/agents/**'
+          - '.github/instructions/**'
+          - '.github/prompts/**'
+          - '.github/copilot-instructions.md'
+          - 'skills/**'
+
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/lib/server/auth/**'
+          - 'src/hooks.server.ts'
+          - 'SECURITY.md'

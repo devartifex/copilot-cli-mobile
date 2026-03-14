@@ -484,6 +484,35 @@ export interface FleetStatusMessage {
   agents: Array<{ agentId: string; agentType: string }>;
 }
 
+export interface HookPreToolMessage {
+  type: 'hook_pre_tool';
+  toolName: string;
+  toolArgs?: unknown;
+}
+
+export interface HookPostToolMessage {
+  type: 'hook_post_tool';
+  toolName: string;
+  toolArgs?: unknown;
+}
+
+export interface HookSessionStartMessage {
+  type: 'hook_session_start';
+  source: string;
+}
+
+export interface HookSessionEndMessage {
+  type: 'hook_session_end';
+  reason: string;
+}
+
+export interface HookErrorMessage {
+  type: 'hook_error';
+  error: string;
+  errorContext: string;
+  recoverable: boolean;
+}
+
 export interface SessionUsageTotals {
   inputTokens: number;
   outputTokens: number;
@@ -556,7 +585,12 @@ export type ServerMessage =
   | ContextChangedMessage
   | WorkspaceFileChangedMessage
   | FleetStartedMessage
-  | FleetStatusMessage;
+  | FleetStatusMessage
+  | HookPreToolMessage
+  | HookPostToolMessage
+  | HookSessionStartMessage
+  | HookSessionEndMessage
+  | HookErrorMessage;
 
 // ─── File attachment ─────────────────────────────────────────────────────────
 
@@ -661,6 +695,7 @@ export interface ListSessionsMessage {
 export interface ResumeSessionMessage {
   type: 'resume_session';
   sessionId: string;
+  mcpServers?: McpServerDefinition[];
 }
 
 export interface DeleteSessionMessage {

@@ -1,0 +1,3 @@
+[codespell]
+skip = node_modules,build,dist,coverage,playwright-report,package-lock.json,.svelte-kit,bundled-sessions,bundled-session-store.db
+ignore-words-list = crate,ot

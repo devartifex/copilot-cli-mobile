@@ -6,6 +6,7 @@ import type {
   ServerMessage,
   NewSessionConfig,
   MessageDeliveryMode,
+  McpServerDefinition,
 } from '$lib/types/index.js';
 import { notify } from '$lib/utils/notifications.js';
 
@@ -40,7 +41,7 @@ export interface WsStore {
     mode?: MessageDeliveryMode,
   ): void;
   newSession(config: NewSessionConfig): void;
-  resumeSession(sessionId: string): void;
+  resumeSession(sessionId: string, mcpServers?: McpServerDefinition[]): void;
   setMode(mode: SessionMode): void;
   setModel(model: string): void;
   setReasoning(effort: ReasoningEffort): void;
@@ -248,9 +249,14 @@ export function createWsStore(): WsStore {
     send(msg);
   }
 
-  function resumeSession(sessionId: string): void {
+  function resumeSession(sessionId: string, mcpServers?: McpServerDefinition[]): void {
     sessionReady = false;
-    send({ type: 'resume_session', sessionId });
+    const enabledServers = mcpServers?.filter(s => s.enabled);
+    send({
+      type: 'resume_session',
+      sessionId,
+      ...(enabledServers?.length && { mcpServers: enabledServers }),
+    });
   }
 
   function setMode(mode: SessionMode): void {

@@ -179,4 +179,40 @@ describe('POST /api/upload', () => {
 		expect(mkdir).toHaveBeenCalledWith('/tmp/copilot-uploads/upload-123', { recursive: true });
 		expect(writeFile).toHaveBeenCalledWith('/tmp/copilot-uploads/upload-123/notes.md', expect.any(Buffer));
 	});
+
+	it.each([
+		['photo.jpg', 'image/jpeg'],
+		['photo.jpeg', 'image/jpeg'],
+		['screenshot.png', 'image/png'],
+		['animation.gif', 'image/gif'],
+		['modern.webp', 'image/webp'],
+	])('accepts image file %s with type %s', async (name, mimeType) => {
+		const content = new Uint8Array([0x89, 0x50, 0x4e, 0x47]); // dummy bytes
+		const request = createUploadRequest([new File([content], name, { type: mimeType })]);
+
+		const response = await POST(createEvent(request, createSession({ githubToken: 'token' })));
+		const body = await response.json();
+
+		expect(response.status).toBe(200);
+		expect(body.files).toHaveLength(1);
+		expect(body.files[0]).toEqual({
+			path: `/tmp/copilot-uploads/upload-123/${name}`,
+			name,
+			size: content.length,
+			type: mimeType,
+		});
+		expect(writeFile).toHaveBeenCalledWith(`/tmp/copilot-uploads/upload-123/${name}`, expect.any(Buffer));
+	});
+
+	it('returns absolute server-side paths for uploaded files', async () => {
+		const request = createUploadRequest([new File(['data'], 'image.png', { type: 'image/png' })]);
+
+		const response = await POST(createEvent(request, createSession({ githubToken: 'token' })));
+		const body = await response.json();
+
+		const filePath: string = body.files[0].path;
+		expect(filePath.startsWith('/')).toBe(true);
+		expect(filePath).toContain('/copilot-uploads/');
+		expect(filePath).not.toContain('http');
+	});
 });

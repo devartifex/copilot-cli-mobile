@@ -42,6 +42,7 @@ import {
   deleteSessionFromFilesystem,
   getSessionDetail,
   getSessionStateDir,
+  isValidSessionId,
   listSessionsFromFilesystem,
 } from './session-metadata.js';
 
@@ -312,5 +313,31 @@ describe('deleteSessionFromFilesystem', () => {
   it('removes valid session directories from disk', async () => {
     await expect(deleteSessionFromFilesystem(sessionId)).resolves.toBe(true);
     expect(rmMock).toHaveBeenCalledWith(sessionDir, { recursive: true, force: true });
+  });
+});
+
+describe('isValidSessionId', () => {
+  it('accepts well-formed UUIDs', () => {
+    expect(isValidSessionId(sessionId)).toBe(true);
+    expect(isValidSessionId('AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE')).toBe(true);
+  });
+
+  it('rejects non-UUID strings', () => {
+    expect(isValidSessionId('')).toBe(false);
+    expect(isValidSessionId('not-a-uuid')).toBe(false);
+    expect(isValidSessionId('../../etc/passwd')).toBe(false);
+    expect(isValidSessionId('../escape')).toBe(false);
+  });
+});
+
+describe('path traversal protection', () => {
+  it('getSessionDetail rejects path traversal attempts', async () => {
+    await expect(getSessionDetail('../../etc/passwd')).resolves.toBeNull();
+    expect(accessMock).not.toHaveBeenCalled();
+  });
+
+  it('buildSessionContext rejects path traversal attempts', async () => {
+    await expect(buildSessionContext('../../etc/passwd')).resolves.toBeNull();
+    expect(readFileMock).not.toHaveBeenCalled();
   });
 });

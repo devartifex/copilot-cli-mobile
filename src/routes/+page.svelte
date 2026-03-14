@@ -207,7 +207,7 @@
 
   function handleResumeSession(sessionId: string): void {
     chatStore.clearMessages();
-    wsStore.resumeSession(sessionId);
+    wsStore.resumeSession(sessionId, settings.mcpServers);
     sessionsOpen = false;
   }
 

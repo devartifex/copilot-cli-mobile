@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, master]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -15,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
+          cache: 'npm'
 
       - run: npm ci
 
@@ -38,5 +42,52 @@ jobs:
       - name: Run unit tests with coverage
         run: npm run test:unit:coverage
 
-      # TODO: Add Playwright E2E tests in a future PR once CI installs browser binaries
-      # and starts the SvelteKit server for the test run environment.
+  e2e:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npx playwright test --project=desktop
+        env:
+          PORT: '3001'
+          GITHUB_CLIENT_ID: test-client-id
+          SESSION_SECRET: test-secret-for-playwright
+          NODE_ENV: development
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  commit-lint:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title follows conventional commits
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+'
+          if [[ ! "$PR_TITLE" =~ $pattern ]]; then
+            echo "❌ PR title does not follow Conventional Commits format"
+            echo "Expected: type(scope): description"
+            echo "Examples: feat: add new feature, fix(auth): resolve login bug"
+            echo "Got: $PR_TITLE"
+            exit 1
+          fi
+          echo "✅ PR title follows Conventional Commits format"

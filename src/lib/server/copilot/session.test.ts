@@ -458,6 +458,47 @@ describe('createCopilotSession', () => {
     });
   });
 
+  it('passes timeout to MCP server config when specified', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+      mcpServers: [
+        {
+          name: 'with-timeout',
+          url: 'https://api.example.com/mcp',
+          type: 'http',
+          headers: {},
+          tools: ['search'],
+          timeout: 60000,
+        },
+        {
+          name: 'without-timeout',
+          url: 'https://api2.example.com/mcp',
+          type: 'http',
+          headers: {},
+          tools: [],
+        },
+      ],
+    });
+
+    const mcpServers = getSessionConfig(client).mcpServers as Record<string, Record<string, unknown>>;
+
+    expect(mcpServers['with-timeout']).toEqual({
+      type: 'http',
+      url: 'https://api.example.com/mcp',
+      headers: {},
+      tools: ['search'],
+      timeout: 60000,
+    });
+
+    expect(mcpServers['without-timeout']).toEqual({
+      type: 'http',
+      url: 'https://api2.example.com/mcp',
+      headers: {},
+      tools: ['*'],
+    });
+  });
+
   it('omits user MCP servers when none are provided', async () => {
     const client = createClientMock();
 
@@ -481,6 +522,7 @@ describe('createCopilotSession', () => {
     expect(config.hooks).toBeDefined();
     expect(config.hooks).toHaveProperty('onPreToolUse');
     expect(config.hooks).toHaveProperty('onPostToolUse');
+    expect(config.hooks).toHaveProperty('onUserPromptSubmitted');
     expect(config.hooks).toHaveProperty('onSessionStart');
     expect(config.hooks).toHaveProperty('onSessionEnd');
     expect(config.hooks).toHaveProperty('onErrorOccurred');
@@ -574,6 +616,21 @@ describe('buildSessionHooks', () => {
       error: 'timeout',
       errorContext: 'tool_execution',
       recoverable: true,
+    });
+  });
+
+  it('forwards user prompt submitted events', () => {
+    const callback = vi.fn();
+    const hooks = buildSessionHooks(callback);
+
+    hooks!.onUserPromptSubmitted!(
+      { timestamp: Date.now(), cwd: '/test', prompt: 'hello world' } as any,
+      { sessionId: 'test-session' },
+    );
+
+    expect(callback).toHaveBeenCalledWith({
+      type: 'hook_user_prompt',
+      prompt: 'hello world',
     });
   });
 });

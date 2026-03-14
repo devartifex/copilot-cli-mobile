@@ -61,14 +61,18 @@ function isValidCustomAgent(agent: unknown): agent is CustomAgentDefinition {
 function isValidMcpServer(s: unknown): s is McpServerDefinition {
   if (!s || typeof s !== 'object') return false;
   const obj = s as Record<string, unknown>;
-  return (
-    typeof obj.name === 'string' &&
-    typeof obj.url === 'string' &&
-    (obj.type === 'http' || obj.type === 'sse') &&
-    typeof obj.headers === 'object' && obj.headers !== null &&
-    Array.isArray(obj.tools) &&
-    typeof obj.enabled === 'boolean'
-  );
+  if (
+    typeof obj.name !== 'string' ||
+    typeof obj.url !== 'string' ||
+    (obj.type !== 'http' && obj.type !== 'sse') ||
+    typeof obj.headers !== 'object' || obj.headers === null ||
+    !Array.isArray(obj.tools) ||
+    typeof obj.enabled !== 'boolean'
+  ) return false;
+  if ('timeout' in obj && obj.timeout !== undefined) {
+    if (typeof obj.timeout !== 'number' || obj.timeout <= 0) return false;
+  }
+  return true;
 }
 
 export interface SettingsStore {

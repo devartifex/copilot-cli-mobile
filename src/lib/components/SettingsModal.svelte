@@ -86,6 +86,7 @@
   let mcpDraftType = $state<'http' | 'sse'>('http');
   let mcpDraftHeaders = $state<Array<{ key: string; value: string }>>([]);
   let mcpDraftTools = $state('');
+  let mcpDraftTimeout = $state('');
   let mcpDraftEnabled = $state(true);
   let mcpFormError = $state('');
 
@@ -106,6 +107,7 @@
     mcpDraftType = 'http';
     mcpDraftHeaders = [];
     mcpDraftTools = '';
+    mcpDraftTimeout = '';
     mcpDraftEnabled = true;
     mcpFormError = '';
   }
@@ -116,6 +118,7 @@
     mcpDraftType = server.type;
     mcpDraftHeaders = Object.entries(server.headers).map(([key, value]) => ({ key, value }));
     mcpDraftTools = server.tools.length > 0 ? server.tools.join(', ') : '';
+    mcpDraftTimeout = server.timeout ? String(server.timeout) : '';
     mcpDraftEnabled = server.enabled;
     mcpFormError = '';
   }
@@ -145,6 +148,7 @@
     const tools = mcpDraftTools.trim()
       ? mcpDraftTools.split(',').map(t => t.trim()).filter(Boolean)
       : [];
+    const timeoutVal = mcpDraftTimeout.trim() ? Number(mcpDraftTimeout.trim()) : undefined;
     return {
       name: mcpDraftName.trim(),
       url: mcpDraftUrl.trim(),
@@ -152,6 +156,7 @@
       headers,
       tools,
       enabled: mcpDraftEnabled,
+      ...(timeoutVal && timeoutVal > 0 ? { timeout: timeoutVal } : {}),
     };
   }
 
@@ -490,6 +495,8 @@
                         <option value="sse">SSE</option>
                       </select>
                       <input class="mcp-input" bind:value={mcpDraftTools} placeholder="Tools filter (comma-separated, empty = all)" />
+                      <label class="mcp-headers-label" for="mcp-timeout-edit">Timeout (ms)</label>
+                      <input id="mcp-timeout-edit" class="mcp-input" type="number" bind:value={mcpDraftTimeout} placeholder="30000" min="1000" max="300000" />
 
                       <div class="mcp-headers-label">Headers</div>
                       {#each mcpDraftHeaders as header, hi (hi)}
@@ -528,6 +535,8 @@
                     <option value="sse">SSE</option>
                   </select>
                   <input class="mcp-input" bind:value={mcpDraftTools} placeholder="Tools filter (comma-separated, empty = all)" />
+                  <label class="mcp-headers-label" for="mcp-timeout-add">Timeout (ms)</label>
+                  <input id="mcp-timeout-add" class="mcp-input" type="number" bind:value={mcpDraftTimeout} placeholder="30000" min="1000" max="300000" />
 
                   <div class="mcp-headers-label">Headers</div>
                   {#each mcpDraftHeaders as header, hi (hi)}

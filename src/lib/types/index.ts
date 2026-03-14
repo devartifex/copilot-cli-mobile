@@ -46,6 +46,7 @@ export interface McpServerDefinition {
   headers: Record<string, string>;
   tools: string[];
   enabled: boolean;
+  timeout?: number;
 }
 
 export interface ToolInfo {
@@ -506,12 +507,25 @@ export interface HookSessionEndMessage {
   reason: string;
 }
 
+export interface HookUserPromptMessage {
+  type: 'hook_user_prompt';
+  prompt: string;
+}
+
 export interface HookErrorMessage {
   type: 'hook_error';
   error: string;
   errorContext: string;
   recoverable: boolean;
 }
+
+export type HookMessage =
+  | HookPreToolMessage
+  | HookPostToolMessage
+  | HookUserPromptMessage
+  | HookSessionStartMessage
+  | HookSessionEndMessage
+  | HookErrorMessage;
 
 export interface SessionUsageTotals {
   inputTokens: number;
@@ -588,6 +602,7 @@ export type ServerMessage =
   | FleetStatusMessage
   | HookPreToolMessage
   | HookPostToolMessage
+  | HookUserPromptMessage
   | HookSessionStartMessage
   | HookSessionEndMessage
   | HookErrorMessage;

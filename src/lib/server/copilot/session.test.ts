@@ -494,6 +494,124 @@ describe('createCopilotSession', () => {
     const config = getSessionConfig(client);
     expect(config.hooks).toBeUndefined();
   });
+
+  it('passes provider config to SDK session when valid BYOK provider is given', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+      provider: {
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: 'sk-test-key',
+        type: 'openai',
+        wireApi: 'completions',
+      },
+    });
+
+    const config = getSessionConfig(client);
+    expect(config.provider).toEqual({
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: 'sk-test-key',
+      type: 'openai',
+      wireApi: 'completions',
+    });
+  });
+
+  it('passes azure provider config with apiVersion to SDK session', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+      provider: {
+        baseUrl: 'https://my-resource.openai.azure.com',
+        apiKey: 'azure-key',
+        type: 'azure',
+        azureApiVersion: '2024-10-21',
+      },
+    });
+
+    const config = getSessionConfig(client);
+    expect(config.provider).toEqual({
+      baseUrl: 'https://my-resource.openai.azure.com',
+      apiKey: 'azure-key',
+      type: 'azure',
+      azure: { apiVersion: '2024-10-21' },
+    });
+  });
+
+  it('passes provider with bearerToken to SDK session', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+      provider: {
+        baseUrl: 'https://api.anthropic.com/v1',
+        bearerToken: 'bearer-xyz',
+        type: 'anthropic',
+      },
+    });
+
+    const config = getSessionConfig(client);
+    expect(config.provider).toMatchObject({
+      baseUrl: 'https://api.anthropic.com/v1',
+      bearerToken: 'bearer-xyz',
+      type: 'anthropic',
+    });
+  });
+
+  it('omits provider from session config when not provided', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token');
+
+    const config = getSessionConfig(client);
+    expect(config.provider).toBeUndefined();
+  });
+
+  it.each([
+    'https://127.0.0.1/v1',
+    'https://10.0.0.8/v1',
+    'https://172.16.5.10/v1',
+    'https://192.168.1.5/v1',
+    'https://localhost/v1',
+    'https://[::1]/v1',
+    'https://[fc00::1]/v1',
+  ])('rejects blocked provider baseUrl: %s', async (baseUrl) => {
+    const client = createClientMock();
+
+    await expect(
+      createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+        provider: { baseUrl, apiKey: 'key' },
+      }),
+    ).rejects.toThrow('internal network URLs are not allowed');
+  });
+
+  it('rejects HTTP provider baseUrl', async () => {
+    const client = createClientMock();
+
+    await expect(
+      createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+        provider: { baseUrl: 'http://api.example.com/v1', apiKey: 'key' },
+      }),
+    ).rejects.toThrow('HTTPS required');
+  });
+
+  it('rejects invalid provider baseUrl', async () => {
+    const client = createClientMock();
+
+    await expect(
+      createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+        provider: { baseUrl: 'not-a-url', apiKey: 'key' },
+      }),
+    ).rejects.toThrow('invalid URL');
+  });
+
+  it('rejects provider baseUrl with embedded credentials', async () => {
+    const client = createClientMock();
+
+    await expect(
+      createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+        provider: { baseUrl: 'https://user:pass@api.example.com/v1', apiKey: 'key' },
+      }),
+    ).rejects.toThrow('auth credentials in URLs are not allowed');
+  });
 });
 
 describe('buildSessionHooks', () => {

@@ -712,6 +712,20 @@ export function setupWebSocket(
                     })
                 : undefined;
 
+              const VALID_PROVIDER_TYPES = new Set(['openai', 'azure', 'anthropic']);
+              const VALID_WIRE_APIS = new Set(['completions', 'responses']);
+              const provider = msg.provider && typeof msg.provider === 'object'
+                && typeof msg.provider.baseUrl === 'string' && msg.provider.baseUrl
+                ? {
+                    baseUrl: msg.provider.baseUrl,
+                    ...(typeof msg.provider.apiKey === 'string' && msg.provider.apiKey && { apiKey: msg.provider.apiKey }),
+                    ...(typeof msg.provider.bearerToken === 'string' && msg.provider.bearerToken && { bearerToken: msg.provider.bearerToken }),
+                    ...(typeof msg.provider.type === 'string' && VALID_PROVIDER_TYPES.has(msg.provider.type) && { type: msg.provider.type as 'openai' | 'azure' | 'anthropic' }),
+                    ...(typeof msg.provider.wireApi === 'string' && VALID_WIRE_APIS.has(msg.provider.wireApi) && { wireApi: msg.provider.wireApi as 'completions' | 'responses' }),
+                    ...(typeof msg.provider.azureApiVersion === 'string' && msg.provider.azureApiVersion && { azureApiVersion: msg.provider.azureApiVersion }),
+                  }
+                : undefined;
+
               const skillDirectories = await getSkillDirectories();
 
               connectionEntry.session = await createCopilotSession(connectionEntry.client, githubToken, {
@@ -729,6 +743,7 @@ export function setupWebSocket(
                 skillDirectories,
                 disabledSkills,
                 customAgents,
+                provider,
                 onHookEvent: (message) => poolSend(connectionEntry, message),
               });
 

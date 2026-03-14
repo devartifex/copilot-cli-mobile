@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ChatMessage } from '$lib/types/index.js';
+  import type { Attachment, ChatMessage } from '$lib/types/index.js';
   import { renderMarkdown, highlightCodeBlocks, addCopyButtons } from '$lib/utils/markdown.js';
   import FleetProgress from './FleetProgress.svelte';
   import ToolCall from '$lib/components/ToolCall.svelte';
@@ -17,6 +17,30 @@
   const renderedHtml = $derived(
     message.role === 'assistant' ? renderMarkdown(message.content) : '',
   );
+
+  const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+
+  type FileAttachmentItem = { name: string; ext: string; isImage: boolean; url: string };
+
+  const attachmentItems: FileAttachmentItem[] = $derived.by(() => {
+    if (message.role !== 'user' || !message.attachments?.length) return [];
+    return message.attachments
+      .filter((att: Attachment) => att.type === 'file')
+      .map((att) => {
+        const a = att as { type: 'file'; path: string; name: string };
+        const ext = a.name.split('.').pop()?.toLowerCase() ?? '';
+        const isImage = IMAGE_EXTENSIONS.has(ext);
+        // Extract uploadId and filename from path: /tmp/copilot-uploads/{uploadId}/{filename}
+        const parts = a.path.split('/');
+        const filename = parts[parts.length - 1];
+        const uploadId = parts[parts.length - 2];
+        const url = `/api/upload/files/${encodeURIComponent(uploadId)}/${encodeURIComponent(filename)}`;
+        return { name: a.name, ext, isImage, url };
+      });
+  });
+
+  const imageAttachments = $derived(attachmentItems.filter((a: FileAttachmentItem) => a.isImage));
+  const fileAttachments = $derived(attachmentItems.filter((a: FileAttachmentItem) => !a.isImage));
 
   const usageText = $derived.by(() => {
     if (message.role !== 'usage') return '';
@@ -69,6 +93,29 @@
   <div class="message user">
     <span class="user-marker">{username ?? 'You'}</span>
     <div class="user-text">{message.content}</div>
+    {#if imageAttachments.length > 0}
+      <ul class="attachment-grid" aria-label="Image attachments">
+        {#each imageAttachments as img (img.name)}
+          <li class="attachment-item">
+            <a href={img.url} target="_blank" rel="noopener noreferrer" class="thumb-link">
+              <img src={img.url} alt={img.name} class="thumb" loading="lazy" />
+            </a>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+    {#if fileAttachments.length > 0}
+      <ul class="file-chips" aria-label="File attachments">
+        {#each fileAttachments as file (file.name)}
+          <li class="attachment-item">
+            <a href={file.url} target="_blank" rel="noopener noreferrer" class="file-chip" aria-label="Attached file: {file.name}">
+              <span class="file-icon" aria-hidden="true">📄</span>
+              <span class="file-name">{file.name}</span>
+            </a>
+          </li>
+        {/each}
+      </ul>
+    {/if}
   </div>
 
 {:else if message.role === 'assistant'}
@@ -164,6 +211,102 @@
     font-weight: 500;
     font-size: 0.95em;
     line-height: 1.65;
+  }
+
+  /* ── attachment thumbnails ─────────────────────────────────────────────── */
+  .attachment-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+    max-width: 100%;
+    list-style: none;
+    padding: 0;
+  }
+
+  .attachment-item {
+    display: contents;
+  }
+
+  .thumb-link {
+    display: block;
+    flex: 0 0 auto;
+    max-width: 200px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: opacity 0.2s ease;
+  }
+
+  .thumb-link:hover {
+    opacity: 0.85;
+  }
+
+  .thumb {
+    display: block;
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  /* ── file chips ────────────────────────────────────────────────────────── */
+  .file-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+    margin-top: var(--sp-2);
+    list-style: none;
+    padding: 0;
+  }
+
+  .file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px var(--sp-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-overlay);
+    color: var(--fg-muted);
+    font-size: 0.8em;
+    text-decoration: none;
+    transition: background 0.15s ease;
+    cursor: pointer;
+    min-height: 28px;
+  }
+
+  .file-chip:hover {
+    background: var(--bg);
+    text-decoration: none;
+  }
+
+  .file-icon {
+    font-size: 0.9em;
+    flex-shrink: 0;
+  }
+
+  .file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 160px;
+  }
+
+  @media (max-width: 600px) {
+    .thumb,
+    .thumb-link {
+      max-width: 140px;
+    }
+
+    .thumb {
+      max-height: 140px;
+    }
+
+    .file-name {
+      max-width: 100px;
+    }
   }
 
   /* ── assistant message ─────────────────────────────────────────────────── */

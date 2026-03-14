@@ -163,7 +163,7 @@
       return;
     }
 
-    chatStore.addUserMessage(content);
+    chatStore.addUserMessage(content, attachments);
     const mode = chatStore.isStreaming ? 'immediate' : undefined;
     wsStore.sendMessage(content, attachments, mode);
   }

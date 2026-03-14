@@ -6,6 +6,7 @@ import type {
   CustomAgentDefinition,
   McpServerDefinition,
   SkillDefinition,
+  ProviderDefinition,
 } from '$lib/types/index.js';
 
 const STORAGE_KEY = 'copilot-cli-settings';
@@ -63,6 +64,21 @@ function isValidMcpServer(s: unknown): s is McpServerDefinition {
   );
 }
 
+const VALID_PROVIDER_TYPES = new Set(['openai', 'azure', 'anthropic']);
+const VALID_WIRE_APIS = new Set(['completions', 'responses']);
+
+function isValidProvider(p: unknown): p is ProviderDefinition {
+  if (!p || typeof p !== 'object') return false;
+  const obj = p as Record<string, unknown>;
+  if (typeof obj.baseUrl !== 'string' || !obj.baseUrl) return false;
+  if (obj.apiKey !== undefined && typeof obj.apiKey !== 'string') return false;
+  if (obj.bearerToken !== undefined && typeof obj.bearerToken !== 'string') return false;
+  if (obj.type !== undefined && (typeof obj.type !== 'string' || !VALID_PROVIDER_TYPES.has(obj.type))) return false;
+  if (obj.wireApi !== undefined && (typeof obj.wireApi !== 'string' || !VALID_WIRE_APIS.has(obj.wireApi))) return false;
+  if (obj.azureApiVersion !== undefined && typeof obj.azureApiVersion !== 'string') return false;
+  return true;
+}
+
 export interface SettingsStore {
   customInstructions: string;
   excludedTools: string[];
@@ -74,6 +90,7 @@ export interface SettingsStore {
   mcpServers: McpServerDefinition[];
   disabledSkills: string[];
   availableSkills: SkillDefinition[];
+  provider: ProviderDefinition | undefined;
   load(): void;
   save(): void;
   syncFromServer(): Promise<void>;
@@ -91,6 +108,7 @@ export function createSettingsStore(): SettingsStore {
   let mcpServers = $state<McpServerDefinition[]>([...(DEFAULT_SETTINGS.mcpServers ?? [])]);
   let disabledSkills = $state<string[]>([...(DEFAULT_SETTINGS.disabledSkills ?? [])]);
   let availableSkills = $state<SkillDefinition[]>([]);
+  let provider = $state<ProviderDefinition | undefined>(undefined);
 
   function load(): void {
     if (typeof localStorage === 'undefined') return;
@@ -115,6 +133,7 @@ export function createSettingsStore(): SettingsStore {
       customAgents,
       mcpServers,
       disabledSkills,
+      provider,
     };
   }
 
@@ -143,6 +162,11 @@ export function createSettingsStore(): SettingsStore {
     }
     if (Array.isArray(parsed.disabledSkills)) {
       disabledSkills = parsed.disabledSkills.filter((s): s is string => typeof s === 'string');
+    }
+    if (parsed.provider === undefined || parsed.provider === null) {
+      provider = undefined;
+    } else if (isValidProvider(parsed.provider)) {
+      provider = parsed.provider;
     }
   }
 
@@ -232,6 +256,12 @@ export function createSettingsStore(): SettingsStore {
 
     get availableSkills() { return availableSkills; },
     set availableSkills(v: SkillDefinition[]) { availableSkills = v; },
+
+    get provider() { return provider; },
+    set provider(v: ProviderDefinition | undefined) {
+      provider = v && isValidProvider(v) ? v : undefined;
+      save();
+    },
 
     load,
     save,

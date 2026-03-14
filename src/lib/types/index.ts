@@ -592,7 +592,7 @@ export type ServerMessage =
   | HookSessionEndMessage
   | HookErrorMessage;
 
-// ─── File attachment ─────────────────────────────────────────────────────────
+// ─── File attachment (upload metadata) ───────────────────────────────────────
 
 export interface FileAttachment {
   path: string;
@@ -600,6 +600,23 @@ export interface FileAttachment {
   size: number;
   type: string;
 }
+
+// ─── SDK attachment types (file, directory, selection) ───────────────────────
+
+export type Attachment =
+  | { type: 'file'; path: string; name: string; displayName?: string }
+  | { type: 'directory'; path: string; name: string; displayName?: string }
+  | {
+      type: 'selection';
+      filePath: string;
+      name: string;
+      displayName: string;
+      selection?: {
+        start: { line: number; character: number };
+        end: { line: number; character: number };
+      };
+      text?: string;
+    };
 
 // ─── Outgoing client messages (discriminated union on `type`) ────────────────
 
@@ -621,7 +638,7 @@ export type MessageDeliveryMode = 'immediate' | 'enqueue';
 export interface SendMessage {
   type: 'message';
   content: string;
-  attachments?: Array<{ path: string; name: string; type: string }>;
+  attachments?: Attachment[];
   mode?: MessageDeliveryMode;
 }
 

@@ -1,4 +1,5 @@
 import type {
+  Attachment,
   ConnectionState,
   SessionMode,
   ReasoningEffort,
@@ -37,7 +38,7 @@ export interface WsStore {
   // Typed send helpers
   sendMessage(
     content: string,
-    attachments?: Array<{ path: string; name: string; type: string }>,
+    attachments?: Attachment[],
     mode?: MessageDeliveryMode,
   ): void;
   newSession(config: NewSessionConfig): void;
@@ -221,7 +222,7 @@ export function createWsStore(): WsStore {
 
   function sendMessage(
     content: string,
-    attachments?: Array<{ path: string; name: string; type: string }>,
+    attachments?: Attachment[],
     mode?: MessageDeliveryMode,
   ): void {
     send({

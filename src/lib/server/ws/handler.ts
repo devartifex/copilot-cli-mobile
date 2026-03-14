@@ -1,8 +1,9 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server, IncomingMessage } from 'http';
-import { writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { writeFile, access } from 'node:fs/promises';
+import { join, resolve, basename } from 'node:path';
 import { tmpdir } from 'node:os';
+import { execSync } from 'node:child_process';
 import { approveAll } from '@github/copilot-sdk';
 import { createCopilotClient } from '../copilot/client.js';
 import { createCopilotSession, getAvailableModels } from '../copilot/session.js';
@@ -39,6 +40,101 @@ const UPLOAD_DIR_PREFIX = join(tmpdir(), 'copilot-uploads');
 export function isValidAttachmentPath(filePath: string): boolean {
   const resolved = resolve(filePath);
   return resolved.startsWith(UPLOAD_DIR_PREFIX + '/');
+}
+
+/** SDK attachment union – mirrors the types accepted by session.send(). */
+type SdkAttachment =
+  | { type: 'file'; path: string; displayName?: string }
+  | { type: 'directory'; path: string; displayName?: string }
+  | { type: 'selection'; filePath: string; displayName: string; selection?: { start: { line: number; character: number }; end: { line: number; character: number } }; text?: string };
+
+/** Map client-sent attachments to the SDK format, validating paths and filtering invalid entries. */
+export function mapAttachmentsToSdk(raw: unknown): SdkAttachment[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+
+  const mapped: SdkAttachment[] = [];
+
+  for (const item of raw) {
+    const a = item as Record<string, unknown>;
+    const attachType = typeof a.type === 'string' ? a.type : 'file';
+
+    if (attachType === 'selection') {
+      const filePath = a.filePath as string | undefined;
+      const displayName = (a.displayName ?? a.name) as string | undefined;
+      if (typeof filePath !== 'string' || typeof displayName !== 'string') continue;
+      if (!isValidAttachmentPath(filePath)) {
+        logSecurity('warn', 'ATTACHMENT_PATH_REJECTED', { path: filePath });
+        continue;
+      }
+      const entry: SdkAttachment = { type: 'selection', filePath, displayName };
+      if (a.selection && typeof a.selection === 'object') {
+        entry.selection = a.selection as SdkAttachment extends { type: 'selection'; selection?: infer S } ? S : never;
+      }
+      if (typeof a.text === 'string') entry.text = a.text;
+      mapped.push(entry);
+    } else if (attachType === 'file' || attachType === 'directory') {
+      const path = a.path as string | undefined;
+      const name = (a.displayName ?? a.name) as string | undefined;
+      if (typeof path !== 'string') continue;
+      if (!isValidAttachmentPath(path)) {
+        logSecurity('warn', 'ATTACHMENT_PATH_REJECTED', { path });
+        continue;
+      }
+      mapped.push({
+        type: attachType as 'file' | 'directory',
+        path,
+        ...(typeof name === 'string' ? { displayName: name } : {}),
+      });
+    }
+  }
+
+  return mapped.length ? mapped : undefined;
+}
+
+/** Get workspace root via git, fallback to cwd */
+function getWorkspaceRoot(): string {
+  try {
+    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
+  } catch {
+    return process.cwd();
+  }
+}
+
+/** Regex to match @file mentions: @path/to/file.ext */
+const FILE_MENTION_RE = /(?:^|\s)@((?:[^\s@]+\/)*[^\s@]+\.[a-zA-Z0-9]+)/g;
+
+/** Parse @path/to/file tokens from message content. Returns resolved file attachments and cleaned prompt. */
+export async function resolveFileMentions(
+  content: string,
+): Promise<{ prompt: string; fileAttachments: Array<{ type: 'file'; path: string; displayName: string }> }> {
+  const workspaceRoot = getWorkspaceRoot();
+  const mentions = [...content.matchAll(FILE_MENTION_RE)];
+  const fileAttachments: Array<{ type: 'file'; path: string; displayName: string }> = [];
+  const seen = new Set<string>();
+
+  for (const match of mentions) {
+    const relativePath = match[1];
+    const absolutePath = resolve(workspaceRoot, relativePath);
+
+    // Security: must be inside workspace
+    if (!absolutePath.startsWith(workspaceRoot + '/')) continue;
+    if (seen.has(absolutePath)) continue;
+
+    try {
+      await access(absolutePath);
+    } catch {
+      continue;
+    }
+
+    seen.add(absolutePath);
+    fileAttachments.push({
+      type: 'file',
+      path: absolutePath,
+      displayName: basename(relativePath),
+    });
+  }
+
+  return { prompt: content, fileAttachments };
 }
 
 /** Parse and validate MCP server entries from a WebSocket message, filtering out disabled servers. */
@@ -674,36 +770,17 @@ export function setupWebSocket(
               return;
             }
 
-            const attachments = Array.isArray(msg.attachments)
-              ? msg.attachments
-                  .filter((a: unknown) => {
-                    const att = a as Record<string, unknown>;
-                    return typeof att.path === 'string' && typeof att.name === 'string';
-                  })
-                  .filter((a: unknown) => {
-                    const att = a as Record<string, unknown>;
-                    const path = att.path as string;
-                    if (!isValidAttachmentPath(path)) {
-                      logSecurity('warn', 'ATTACHMENT_PATH_REJECTED', { path });
-                      return false;
-                    }
-                    return true;
-                  })
-                  .map((a: unknown) => {
-                    const att = a as Record<string, unknown>;
-                    return {
-                      type: 'file' as const,
-                      path: att.path as string,
-                      displayName: att.name as string,
-                    };
-                  })
-              : undefined;
+            const uploadAttachments = mapAttachmentsToSdk(msg.attachments) ?? [];
+
+            // Resolve @file mentions from the message content
+            const { prompt, fileAttachments: mentionAttachments } = await resolveFileMentions(content);
+            const allAttachments = [...uploadAttachments, ...mentionAttachments];
 
             connectionEntry.isProcessing = true;
             const sendMode = msg.mode === 'immediate' || msg.mode === 'enqueue' ? msg.mode : undefined;
             await connectionEntry.session.send({
-              prompt: content,
-              ...(attachments?.length ? { attachments } : {}),
+              prompt,
+              ...(allAttachments.length ? { attachments: allAttachments } : {}),
               ...(sendMode ? { mode: sendMode } : {}),
             });
             break;

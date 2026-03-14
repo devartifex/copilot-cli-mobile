@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { ConnectionState, FileAttachment, SessionMode, UserInputState } from '$lib/types/index.js';
+  import { tick } from 'svelte';
+  import type { Attachment, ConnectionState, FileAttachment, SessionMode, UserInputState } from '$lib/types/index.js';
 
   interface Props {
     connectionState: ConnectionState;
@@ -8,7 +9,7 @@
     isWaiting: boolean;
     mode: SessionMode;
     pendingUserInput: UserInputState | null;
-    onSend: (content: string, attachments?: Array<{ path: string; name: string; type: string }>) => void;
+    onSend: (content: string, attachments?: Attachment[]) => void;
     onAbort: () => void;
     onSetMode: (mode: SessionMode) => void;
     onUserInputResponse: (answer: string, wasFreeform: boolean) => void;
@@ -52,6 +53,16 @@
   let isUploading = $state(false);
   let attachMenuOpen = $state(false);
 
+  // @ file mention autocomplete state
+  let mentionOpen = $state(false);
+  let mentionQuery = $state('');
+  let mentionStartPos = $state(0);
+  let mentionFiles = $state<string[]>([]);
+  let mentionIndex = $state(0);
+  let mentionLoading = $state(false);
+  let mentionListEl: HTMLUListElement | undefined = $state();
+  let mentionFetchTimer: ReturnType<typeof setTimeout> | undefined;
+
   const isDisabled = $derived(
     !pendingUserInput && (connectionState !== 'connected' || !sessionReady || isUploading),
   );
@@ -87,6 +98,9 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
+    // Handle @ mention keyboard navigation first
+    if (handleMentionKeydown(event)) return;
+
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       if (pendingUserInput) {
@@ -180,13 +194,13 @@
     const trimmed = inputValue.trim();
     if ((!trimmed && selectedFiles.length === 0) || isDisabled) return;
 
-    let attachments: Array<{ path: string; name: string; type: string }> | undefined;
+    let attachments: Attachment[] | undefined;
 
     if (selectedFiles.length > 0) {
       isUploading = true;
       try {
         const uploaded = await uploadFiles(selectedFiles);
-        attachments = uploaded.map((f) => ({ path: f.path, name: f.name, type: f.type }));
+        attachments = uploaded.map((f) => ({ type: 'file' as const, path: f.path, name: f.name }));
       } catch (err) {
         console.error('Upload failed:', err);
         isUploading = false;
@@ -209,6 +223,122 @@
       inputValue = inputValue.slice(0, MAX_LENGTH);
     }
     autoResize();
+    detectMention();
+  }
+
+  async function fetchMentionFiles(query: string) {
+    mentionLoading = true;
+    try {
+      const params = query ? `?q=${encodeURIComponent(query)}` : '';
+      const res = await fetch(`/api/files${params}`);
+      if (!res.ok) {
+        mentionFiles = [];
+        return;
+      }
+      const data = await res.json();
+      mentionFiles = Array.isArray(data.files) ? data.files : [];
+      mentionIndex = 0;
+    } catch {
+      mentionFiles = [];
+    } finally {
+      mentionLoading = false;
+    }
+  }
+
+  function detectMention() {
+    if (!textareaEl) return;
+    const pos = textareaEl.selectionStart;
+    const text = inputValue.slice(0, pos);
+
+    const lastAt = text.lastIndexOf('@');
+    if (lastAt === -1) {
+      closeMention();
+      return;
+    }
+
+    // @ must be at start of text or preceded by whitespace
+    if (lastAt > 0 && !/\s/.test(text[lastAt - 1])) {
+      closeMention();
+      return;
+    }
+
+    const query = text.slice(lastAt + 1);
+    // If there's a space in the query, the mention is complete
+    if (/\s/.test(query)) {
+      closeMention();
+      return;
+    }
+
+    mentionStartPos = lastAt;
+    mentionQuery = query;
+    mentionOpen = true;
+
+    if (mentionFetchTimer) clearTimeout(mentionFetchTimer);
+    mentionFetchTimer = setTimeout(() => fetchMentionFiles(query), 150);
+  }
+
+  function closeMention() {
+    mentionOpen = false;
+    mentionFiles = [];
+    mentionQuery = '';
+    mentionIndex = 0;
+    if (mentionFetchTimer) {
+      clearTimeout(mentionFetchTimer);
+      mentionFetchTimer = undefined;
+    }
+  }
+
+  function selectMentionFile(filePath: string) {
+    if (!textareaEl) return;
+    const before = inputValue.slice(0, mentionStartPos);
+    const after = inputValue.slice(textareaEl.selectionStart);
+    inputValue = `${before}@${filePath}${after ? '' : ' '}${after}`;
+    closeMention();
+    tick().then(() => {
+      if (textareaEl) {
+        const newPos = before.length + 1 + filePath.length + (after ? 0 : 1);
+        textareaEl.selectionStart = newPos;
+        textareaEl.selectionEnd = newPos;
+        textareaEl.focus();
+        autoResize();
+      }
+    });
+  }
+
+  function handleMentionKeydown(event: KeyboardEvent): boolean {
+    if (!mentionOpen || mentionFiles.length === 0) return false;
+
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        mentionIndex = (mentionIndex + 1) % mentionFiles.length;
+        scrollMentionIntoView();
+        return true;
+      case 'ArrowUp':
+        event.preventDefault();
+        mentionIndex = (mentionIndex - 1 + mentionFiles.length) % mentionFiles.length;
+        scrollMentionIntoView();
+        return true;
+      case 'Enter':
+      case 'Tab':
+        event.preventDefault();
+        selectMentionFile(mentionFiles[mentionIndex]);
+        return true;
+      case 'Escape':
+        event.preventDefault();
+        closeMention();
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  function scrollMentionIntoView() {
+    tick().then(() => {
+      if (!mentionListEl) return;
+      const active = mentionListEl.querySelector('[aria-selected="true"]');
+      active?.scrollIntoView({ block: 'nearest' });
+    });
   }
 
   function formatFileSize(bytes: number): string {
@@ -314,6 +444,33 @@
           <span class="slash-cmd">/fleet</span>
           <span class="slash-desc">Run parallel sub-agents on a task</span>
         </button>
+      </div>
+    {/if}
+
+    {#if mentionOpen && (mentionFiles.length > 0 || mentionLoading)}
+      <div class="mention-popover" role="listbox" aria-label="File mentions">
+        {#if mentionLoading && mentionFiles.length === 0}
+          <div class="mention-loading">Searching files…</div>
+        {:else}
+          <ul class="mention-list" bind:this={mentionListEl}>
+            {#each mentionFiles.slice(0, 8) as file, i (file)}
+              <li
+                class="mention-item"
+                class:active={i === mentionIndex}
+                role="option"
+                aria-selected={i === mentionIndex}
+                onmousedown={(e) => { e.preventDefault(); selectMentionFile(file); }}
+                onmouseenter={() => { mentionIndex = i; }}
+              >
+                <span class="mention-icon" aria-hidden="true">📄</span>
+                <span class="mention-path">{file}</span>
+              </li>
+            {/each}
+          </ul>
+          {#if mentionFiles.length > 8}
+            <div class="mention-more">{mentionFiles.length - 8} more…</div>
+          {/if}
+        {/if}
       </div>
     {/if}
 
@@ -612,6 +769,77 @@
 
   .slash-desc {
     color: var(--fg-muted);
+  }
+
+  /* ── @ File mention popover ────────────────────────────────────── */
+  .mention-popover {
+    position: absolute;
+    bottom: 100%;
+    left: var(--sp-2);
+    right: var(--sp-2);
+    background: var(--bg-raised, var(--bg-overlay));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: var(--sp-1);
+    z-index: 12;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    animation: userInputIn 0.12s ease;
+    overflow: hidden;
+  }
+
+  .mention-loading {
+    padding: var(--sp-2) var(--sp-3);
+    color: var(--fg-dim);
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+  }
+
+  .mention-list {
+    list-style: none;
+    margin: 0;
+    padding: var(--sp-1) 0;
+    max-height: 280px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .mention-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-1) var(--sp-3);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    color: var(--fg);
+    transition: background 0.08s ease;
+    min-height: 32px;
+  }
+
+  .mention-item:hover,
+  .mention-item.active {
+    background: var(--bg-secondary, rgba(255, 255, 255, 0.08));
+  }
+
+  .mention-icon {
+    flex-shrink: 0;
+    font-size: 0.9em;
+  }
+
+  .mention-path {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .mention-more {
+    padding: var(--sp-1) var(--sp-3);
+    color: var(--fg-dim);
+    font-family: var(--font-mono);
+    font-size: 0.75em;
+    border-top: 1px solid var(--border);
+    text-align: center;
   }
 
   .fleet-btn {

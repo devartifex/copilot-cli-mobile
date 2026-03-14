@@ -37,20 +37,6 @@ export interface CustomToolDefinition {
   parameters: Record<string, { type: string; description: string }>;
 }
 
-// ─── BYOK provider definitions ──────────────────────────────────────────────
-
-export type ProviderType = 'openai' | 'azure' | 'anthropic';
-export type ProviderWireApi = 'completions' | 'responses';
-
-export interface ProviderDefinition {
-  baseUrl: string;
-  apiKey?: string;
-  bearerToken?: string;
-  type?: ProviderType;
-  wireApi?: ProviderWireApi;
-  azureApiVersion?: string;
-}
-
 // ─── Tool / Agent types ─────────────────────────────────────────────────────
 
 export interface McpServerDefinition {
@@ -651,7 +637,6 @@ export interface NewSessionMessage {
   mcpServers?: McpServerDefinition[];
   disabledSkills?: string[];
   customAgents?: CustomAgentDefinition[];
-  provider?: ProviderDefinition;
   infiniteSessions?: InfiniteSessionsConfig;
 }
 
@@ -893,7 +878,6 @@ export interface NewSessionConfig {
   mcpServers?: McpServerDefinition[];
   disabledSkills?: string[];
   customAgents?: CustomAgentDefinition[];
-  provider?: ProviderDefinition;
   infiniteSessions?: InfiniteSessionsConfig;
 }
 
@@ -909,7 +893,6 @@ export interface PersistedSettings {
   mcpServers?: McpServerDefinition[];
   disabledSkills?: string[];
   customAgents?: CustomAgentDefinition[];
-  provider?: ProviderDefinition;
   infiniteSessions?: InfiniteSessionsConfig;
 }
 

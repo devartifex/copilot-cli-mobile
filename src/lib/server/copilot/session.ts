@@ -31,15 +31,6 @@ export interface McpServerInput {
   tools: string[];
 }
 
-export interface ProviderInput {
-  baseUrl: string;
-  apiKey?: string;
-  bearerToken?: string;
-  type?: 'openai' | 'azure' | 'anthropic';
-  wireApi?: 'completions' | 'responses';
-  azureApiVersion?: string;
-}
-
 export interface CreateSessionOptions {
   model?: string;
   reasoningEffort?: ReasoningEffort;
@@ -63,7 +54,6 @@ export interface CreateSessionOptions {
     prompt: string;
   }>;
   onHookEvent?: HookEventCallback;
-  provider?: ProviderInput;
 }
 
 function buildZodSchema(params: Record<string, { type: string; description: string }>): z.ZodObject<Record<string, z.ZodTypeAny>> {
@@ -134,7 +124,7 @@ function isBlockedHostname(hostname: string): boolean {
   }
 }
 
-function validateOutboundUrl(kind: 'Tool' | 'MCP server' | 'Provider', name: string, rawUrl: string): void {
+function validateOutboundUrl(kind: 'Tool' | 'MCP server', name: string, rawUrl: string): void {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -161,42 +151,6 @@ function validateToolUrl(toolName: string, webhookUrl: string): void {
 
 function validateMcpServerUrl(name: string, serverUrl: string): void {
   validateOutboundUrl('MCP server', name, serverUrl);
-}
-
-function validateProviderBaseUrl(rawUrl: string): void {
-  validateOutboundUrl('Provider', 'baseUrl', rawUrl);
-}
-
-function buildProviderConfig(input: ProviderInput): NonNullable<SessionConfig['provider']> {
-  validateProviderBaseUrl(input.baseUrl);
-
-  const providerConfig: Record<string, unknown> = {
-    baseUrl: input.baseUrl,
-  };
-
-  if (input.apiKey) {
-    providerConfig.apiKey = input.apiKey;
-  }
-
-  if (input.bearerToken) {
-    providerConfig.bearerToken = input.bearerToken;
-  }
-
-  const validProviderTypes = new Set(['openai', 'azure', 'anthropic']);
-  if (input.type && validProviderTypes.has(input.type)) {
-    providerConfig.type = input.type;
-  }
-
-  const validWireApis = new Set(['completions', 'responses']);
-  if (input.wireApi && validWireApis.has(input.wireApi)) {
-    providerConfig.wireApi = input.wireApi;
-  }
-
-  if (input.type === 'azure' && input.azureApiVersion) {
-    providerConfig.azure = { apiVersion: input.azureApiVersion };
-  }
-
-  return providerConfig as unknown as NonNullable<SessionConfig['provider']>;
 }
 
 function buildUserMcpServers(servers?: McpServerInput[]): Record<string, unknown> {
@@ -356,10 +310,6 @@ export async function createCopilotSession(
 
   if (options.onHookEvent) {
     sessionConfig.hooks = buildSessionHooks(options.onHookEvent);
-  }
-
-  if (options.provider) {
-    sessionConfig.provider = buildProviderConfig(options.provider);
   }
 
   return client.createSession(sessionConfig);

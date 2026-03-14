@@ -12,6 +12,7 @@
     onAbort: () => void;
     onSetMode: (mode: SessionMode) => void;
     onUserInputResponse: (answer: string, wasFreeform: boolean) => void;
+    onFleet?: (prompt: string) => void;
   }
 
   const MAX_LENGTH = 10_000;
@@ -34,6 +35,7 @@
     onAbort,
     onSetMode,
     onUserInputResponse,
+    onFleet,
   }: Props = $props();
 
   const modes: { value: SessionMode; label: string }[] = [
@@ -71,6 +73,10 @@
 
   const showSteeringIndicator = $derived(
     !pendingUserInput && isStreaming && inputValue.trim().length > 0,
+  );
+
+  const showSlashHint = $derived(
+    !pendingUserInput && inputValue === '/' && !isDisabled,
   );
 
   function autoResize() {
@@ -302,6 +308,15 @@
       onkeydown={handleKeydown}
     ></textarea>
 
+    {#if showSlashHint}
+      <div class="slash-hint" role="listbox" aria-label="Slash commands">
+        <button class="slash-option" role="option" aria-selected="false" onclick={() => { inputValue = '/fleet '; textareaEl?.focus(); }}>
+          <span class="slash-cmd">/fleet</span>
+          <span class="slash-desc">Run parallel sub-agents on a task</span>
+        </button>
+      </div>
+    {/if}
+
     {#if showSteeringIndicator}
       <div class="steering-indicator" role="status" aria-live="polite">
         Sending now will steer the current response.
@@ -370,6 +385,17 @@
               {m.label}
             </button>
           {/each}
+          {#if onFleet}
+            <button
+              class="mode-btn fleet-btn"
+              onclick={() => { inputValue = '/fleet '; textareaEl?.focus(); }}
+              disabled={isDisabled && !pendingUserInput}
+              aria-label="Fleet mode"
+              title="Parallel sub-agents: type /fleet followed by your task"
+            >
+              ⚡ Fleet
+            </button>
+          {/if}
         </div>
       </div>
 
@@ -542,6 +568,53 @@
     font-family: var(--font-mono);
     font-size: 0.75em;
     line-height: 1.4;
+  }
+
+  .slash-hint {
+    position: absolute;
+    bottom: 100%;
+    left: var(--sp-2);
+    right: var(--sp-2);
+    background: var(--bg-overlay);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--sp-1);
+    margin-bottom: var(--sp-1);
+    z-index: 10;
+    animation: userInputIn 0.15s ease;
+  }
+
+  .slash-option {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: none;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.85em;
+  }
+
+  .slash-option:hover {
+    background: var(--bg-secondary);
+  }
+
+  .slash-cmd {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--purple);
+  }
+
+  .slash-desc {
+    color: var(--fg-muted);
+  }
+
+  .fleet-btn {
+    color: var(--purple) !important;
   }
 
   .toolbar-right {

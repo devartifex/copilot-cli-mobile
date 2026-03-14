@@ -9,11 +9,13 @@ Self-hosted multi-model AI chat platform powered by the official `@github/copilo
 ## Architecture
 
 - **Full-stack**: SvelteKit 5 with `adapter-node` (replaces Express + vanilla JS)
-- **Frontend**: 17 Svelte 5 components with rune-based stores — dark theme, mobile-first
+- **Frontend**: 20 Svelte 5 components with 4 rune-based stores — dark theme, mobile-first
 - **Real-time**: WebSocket via custom `server.js` entry, per-user `CopilotClient` lifecycle
 - **Auth**: GitHub Device Flow only (no client secret, no redirect URI)
 - **Session**: Express sessions bridged to SvelteKit via `x-session-id` header in `hooks.server.ts`
-- **Deployment**: Docker container → Azure Container Apps via `azd up` or GitHub Actions
+- **Skills**: `skills/` directory with `SKILL.md` definitions, discovered server-side and passed to the SDK via `skillDirectories`
+- **Settings**: Persisted server-side via `/api/settings` and mirrored in `localStorage`
+- **Deployment**: Docker container → Azure Container Apps via `azd up`
 
 ## Tech Stack
 
@@ -28,36 +30,56 @@ Self-hosted multi-model AI chat platform powered by the official `@github/copilo
 | Markdown | `marked` + `dompurify` + `highlight.js` (npm, bundled by Vite) |
 | Security | Helmet-like CSP in hooks.server.ts, rate limiting, DOMPurify |
 | Sessions | express-session bridged to SvelteKit locals |
-| Build | `vite build` → `build/` via adapter-node |
-| Testing | Playwright (desktop + mobile viewports) |
+| Build | `npm run build` (`tsc -p tsconfig.node.json` + `vite build`) → `build/` via adapter-node |
+| Testing | Vitest (colocated `*.test.ts`) + Playwright (Desktop Chrome, Pixel 7, iPhone 14) |
 | Container | Multi-stage Dockerfile (builder + runtime) |
-| IaC | Bicep (Container Apps, ACR, Managed Identity) |
+| IaC | Bicep (Azure Container Apps) |
 
 ## Project Structure
 
 ```
 server.js                       # Custom entry: HTTP + express-session + WebSocket + SvelteKit handler
+skills/                         # SDK skill definitions (currently 1 skill)
+└── git-commit/SKILL.md         # Built-in git commit workflow skill
+tests/                          # Playwright E2E suites and helpers
 svelte.config.js                # SvelteKit config (adapter-node)
 vite.config.ts                  # Vite config
+vitest.config.ts                # Vitest config for colocated unit tests
 
 src/
 ├── app.html                    # SvelteKit shell (viewport, theme-color, PWA meta)
 ├── app.css                     # Global reset, design tokens, highlight.js theme
 ├── hooks.server.ts             # Session bridge, CSP headers, rate limiting
+├── hooks.server.test.ts        # Example colocated unit test pattern
 │
 ├── lib/
-│   ├── components/             # 17 Svelte 5 components (see ARCHITECTURE.md)
-│   ├── stores/                 # Rune stores: auth, chat, settings, ws
-│   ├── server/                 # Server-only: auth, copilot, ws handler, config
-│   ├── types/index.ts          # All types: 34 server + 19 client message types
+│   ├── components/             # 20 Svelte 5 components (see ARCHITECTURE.md)
+│   ├── stores/                 # 4 rune stores: auth, chat, settings, ws
+│   ├── server/                 # 22 server files: auth, copilot, settings, skills, ws, security
+│   ├── types/index.ts          # All message types: 60 server + 18 client = 78 total
 │   └── utils/markdown.ts       # Shared markdown pipeline
 │
 ├── routes/
-│   ├── +page.svelte            # Main page: login or full chat screen
-│   ├── +layout.server.ts       # Root: auth check from session
-│   ├── auth/device/…           # Device Flow endpoints
-│   ├── api/…                   # Models, upload, version, client-error
-│   └── health/+server.ts       # Health check
+│   ├── +page.svelte            # Main page: login or full chat screen (1 page route)
+│   ├── +layout.svelte          # App shell layout
+│   ├── +layout.server.ts       # Root auth/session bootstrap
+│   ├── +error.svelte           # Route error boundary
+│   ├── auth/
+│   │   ├── device/start/+server.ts
+│   │   ├── device/poll/+server.ts
+│   │   ├── logout/+server.ts
+│   │   └── status/+server.ts
+│   ├── api/
+│   │   ├── client-error/+server.ts
+│   │   ├── models/+server.ts
+│   │   ├── settings/+server.ts
+│   │   ├── skills/+server.ts
+│   │   ├── upload/+server.ts
+│   │   ├── version/+server.ts
+│   │   └── sessions/sync/+server.ts
+│   └── health/+server.ts       # 12 +server.ts endpoint routes total
+│
+└── **/*.test.ts                # Vitest unit tests live next to source files
 ```
 
 ## Conventions
@@ -115,13 +137,18 @@ docker compose up --build
 npm install && npm run build && npm start
 
 # Development
-npm run dev                      # Vite dev server
+npm run dev                      # Docker Compose development stack
+npm run dev:local                # Local Vite dev server after building server-side TypeScript
 
 # Type check
 npm run check                    # svelte-check
 
-# Tests
-npx playwright test              # E2E tests (desktop + mobile)
+# Unit tests (Vitest, colocated as *.test.ts)
+npm run test:unit
+npm run test:unit:coverage
+
+# E2E tests (Playwright: Desktop Chrome, Pixel 7, iPhone 14)
+npx playwright test
 ```
 
 ## Important Notes
@@ -131,5 +158,8 @@ npx playwright test              # E2E tests (desktop + mobile)
 - WebSocket connections validate the GitHub token against GitHub's API on connect
 - Model defaults to `gpt-4.1` if not specified
 - Permission hooks: `approveAll` in autopilot mode, interactive prompts in other modes
+- Settings sync through `/api/settings`: authenticated users get a server-side source of truth, while the client mirrors sanitized data in `localStorage`
+- Skills are discovered from `skills/*/SKILL.md`, exposed via `/api/skills`, and passed into SDK sessions through `skillDirectories`
 - Custom tools use webhook HTTP calls with SSRF protection
 - The SDK's `@github/copilot` CLI needs `node:sqlite` which ships with Node 24
+- Unit tests live next to source as `*.test.ts`; Playwright E2E suites live in `tests/`

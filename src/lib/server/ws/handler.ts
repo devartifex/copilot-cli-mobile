@@ -10,6 +10,7 @@ import { config } from '../config.js';
 import { logSecurity } from '../security-log.js';
 import { validateGitHubToken } from '../auth/github.js';
 import { checkAuth } from '../auth/guard.js';
+import { getSkillDirectories } from '../skills/scanner.js';
 import { clearAuth } from '../auth/session-utils.js';
 import {
   sessionPool, createPoolEntry, destroyPoolEntry, poolSend,
@@ -571,6 +572,12 @@ export function setupWebSocket(
                     })
                 : undefined;
 
+              const disabledSkills = Array.isArray(msg.disabledSkills)
+                ? msg.disabledSkills.filter((s: unknown) => typeof s === 'string')
+                : undefined;
+
+              const skillDirectories = await getSkillDirectories();
+
               connectionEntry.session = await createCopilotSession(connectionEntry.client, githubToken, {
                 model: msg.model,
                 reasoningEffort: msg.reasoningEffort,
@@ -583,6 +590,8 @@ export function setupWebSocket(
                 onPermissionRequest: makePermissionHandler(connectionEntry),
                 mcpServers,
                 configDir: config.copilotConfigDir,
+                skillDirectories,
+                disabledSkills,
               });
 
               wireSessionEvents(connectionEntry.session, connectionEntry, connectionEntry.session?.sessionId);

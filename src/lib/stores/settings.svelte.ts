@@ -4,6 +4,7 @@ import type {
   PersistedSettings,
   CustomToolDefinition,
   McpServerDefinition,
+  SkillDefinition,
 } from '$lib/types/index.js';
 
 const STORAGE_KEY = 'copilot-cli-settings';
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: PersistedSettings = {
   excludedTools: [],
   customTools: [],
   mcpServers: [],
+  disabledSkills: [],
 };
 
 const VALID_MODES = new Set<SessionMode>(['interactive', 'plan', 'autopilot']);
@@ -55,9 +57,12 @@ export interface SettingsStore {
   selectedModel: string;
   selectedMode: SessionMode;
   mcpServers: McpServerDefinition[];
+  disabledSkills: string[];
+  availableSkills: SkillDefinition[];
   load(): void;
   save(): void;
   syncFromServer(): Promise<void>;
+  fetchSkills(): Promise<void>;
 }
 
 export function createSettingsStore(): SettingsStore {
@@ -68,6 +73,8 @@ export function createSettingsStore(): SettingsStore {
   let selectedModel = $state(DEFAULT_SETTINGS.model);
   let selectedMode = $state<SessionMode>(DEFAULT_SETTINGS.mode);
   let mcpServers = $state<McpServerDefinition[]>([...(DEFAULT_SETTINGS.mcpServers ?? [])]);
+  let disabledSkills = $state<string[]>([...(DEFAULT_SETTINGS.disabledSkills ?? [])]);
+  let availableSkills = $state<SkillDefinition[]>([]);
 
   function load(): void {
     if (typeof localStorage === 'undefined') return;
@@ -90,6 +97,7 @@ export function createSettingsStore(): SettingsStore {
       excludedTools,
       customTools,
       mcpServers,
+      disabledSkills,
     };
   }
 
@@ -112,6 +120,9 @@ export function createSettingsStore(): SettingsStore {
     }
     if (Array.isArray(parsed.mcpServers)) {
       mcpServers = parsed.mcpServers.filter(isValidMcpServer).slice(0, 10);
+    }
+    if (Array.isArray(parsed.disabledSkills)) {
+      disabledSkills = parsed.disabledSkills.filter((s): s is string => typeof s === 'string');
     }
   }
 
@@ -158,6 +169,19 @@ export function createSettingsStore(): SettingsStore {
     }
   }
 
+  async function fetchSkills(): Promise<void> {
+    try {
+      const res = await fetch('/api/skills');
+      if (!res.ok) return;
+      const body = await res.json() as { skills?: SkillDefinition[] };
+      if (Array.isArray(body.skills)) {
+        availableSkills = body.skills;
+      }
+    } catch {
+      // Ignore fetch errors
+    }
+  }
+
   return {
     get customInstructions() { return customInstructions; },
     set customInstructions(v: string) { customInstructions = v; save(); },
@@ -180,8 +204,15 @@ export function createSettingsStore(): SettingsStore {
     get mcpServers() { return mcpServers; },
     set mcpServers(v: McpServerDefinition[]) { mcpServers = v.slice(0, 10); save(); },
 
+    get disabledSkills() { return disabledSkills; },
+    set disabledSkills(v: string[]) { disabledSkills = v; save(); },
+
+    get availableSkills() { return availableSkills; },
+    set availableSkills(v: SkillDefinition[]) { availableSkills = v; },
+
     load,
     save,
     syncFromServer,
+    fetchSkills,
   };
 }

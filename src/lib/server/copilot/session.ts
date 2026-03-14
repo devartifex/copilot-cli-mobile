@@ -42,6 +42,8 @@ export interface CreateSessionOptions {
   onPermissionRequest?: SessionConfig['onPermissionRequest'];
   mcpServers?: McpServerInput[];
   configDir?: string;
+  skillDirectories?: string[];
+  disabledSkills?: string[];
 }
 
 function buildZodSchema(params: Record<string, { type: string; description: string }>): z.ZodObject<Record<string, z.ZodTypeAny>> {
@@ -257,6 +259,14 @@ export async function createCopilotSession(
 
   if (options.configDir) {
     sessionConfig.configDir = options.configDir;
+  }
+
+  if (options.skillDirectories && options.skillDirectories.length > 0) {
+    sessionConfig.skillDirectories = options.skillDirectories;
+  }
+
+  if (options.disabledSkills && options.disabledSkills.length > 0) {
+    sessionConfig.disabledSkills = options.disabledSkills;
   }
 
   return client.createSession(sessionConfig);

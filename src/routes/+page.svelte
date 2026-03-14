@@ -36,6 +36,10 @@
     new Set(chatStore.tools.filter(t => t.mcpServerName).map(t => t.mcpServerName)).size
   );
 
+  const activeSkillCount = $derived(
+    settings.availableSkills.length - settings.disabledSkills.length
+  );
+
   const modeStyle = $derived.by(() => {
     switch (chatStore.mode) {
       case 'plan':
@@ -58,6 +62,7 @@
       console.log(`[PAGE] authenticated=true, loading settings & connecting WS`);
       settings.load();
       settings.syncFromServer();
+      settings.fetchSkills();
       wsStore.connect();
 
       // Wire WS messages → chat store
@@ -137,6 +142,7 @@
       ...(settings.excludedTools.length > 0 && { excludedTools: settings.excludedTools }),
       ...(settings.customTools.length > 0 && { customTools: settings.customTools }),
       ...(settings.mcpServers.length > 0 && { mcpServers: settings.mcpServers.filter(s => s.enabled) }),
+      ...(settings.disabledSkills.length > 0 && { disabledSkills: settings.disabledSkills }),
     });
   }
 
@@ -204,6 +210,14 @@
     wsStore.respondToPermission(requestId, kind, toolName, decision);
     chatStore.clearPendingPermission();
   }
+
+  function handleToggleSkill(skillName: string, enabled: boolean): void {
+    if (enabled) {
+      settings.disabledSkills = settings.disabledSkills.filter(s => s !== skillName);
+    } else {
+      settings.disabledSkills = [...settings.disabledSkills, skillName];
+    }
+  }
 </script>
 
 <svelte:head>
@@ -217,6 +231,7 @@
       connectionState={wsStore.connectionState}
       sessionTitle={chatStore.sessionTitle}
       quotaSnapshots={chatStore.quotaSnapshots}
+      {activeSkillCount}
       onToggleSidebar={() => sidebarOpen = true}
       onOpenModelSheet={() => modelSheetOpen = true}
       onNewChat={handleNewChat}
@@ -302,6 +317,8 @@
       excludedTools={settings.excludedTools}
       customTools={settings.customTools}
       mcpServers={settings.mcpServers}
+      availableSkills={settings.availableSkills}
+      disabledSkills={settings.disabledSkills}
       onClose={() => settingsOpen = false}
       onSaveInstructions={(v) => { settings.customInstructions = v; }}
       onToggleTool={(name, enabled) => {
@@ -313,12 +330,14 @@
       }}
       onSaveCustomTools={(tools) => { settings.customTools = tools; }}
       onSaveMcpServers={(servers) => { settings.mcpServers = servers; }}
+      onToggleSkill={handleToggleSkill}
       onSelectAgent={(name) => wsStore.selectAgent(name)}
       onDeselectAgent={() => wsStore.deselectAgent()}
       onCompact={() => wsStore.compact()}
       onFetchTools={() => wsStore.listTools(chatStore.currentModel)}
       onFetchAgents={() => wsStore.listAgents()}
       onFetchQuota={() => wsStore.getQuota()}
+      onFetchSkills={() => settings.fetchSkills()}
     />
 
     <SessionsSheet

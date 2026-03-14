@@ -358,6 +358,32 @@ describe('createCopilotSession', () => {
       }),
     ).rejects.toThrow('invalid URL');
   });
+
+  it('passes skillDirectories and disabledSkills to the SDK session config', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+      skillDirectories: ['/skills/git-commit', '/skills/code-review'],
+      disabledSkills: ['code-review'],
+    });
+
+    const config = getSessionConfig(client);
+    expect(config.skillDirectories).toEqual(['/skills/git-commit', '/skills/code-review']);
+    expect(config.disabledSkills).toEqual(['code-review']);
+  });
+
+  it('omits skillDirectories and disabledSkills when empty', async () => {
+    const client = createClientMock();
+
+    await createCopilotSession(client as unknown as Parameters<typeof createCopilotSession>[0], 'gh-token', {
+      skillDirectories: [],
+      disabledSkills: [],
+    });
+
+    const config = getSessionConfig(client);
+    expect(config.skillDirectories).toBeUndefined();
+    expect(config.disabledSkills).toBeUndefined();
+  });
 });
 
 describe('getAvailableModels', () => {

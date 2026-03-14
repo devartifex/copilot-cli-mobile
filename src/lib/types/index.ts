@@ -565,6 +565,7 @@ export interface NewSessionMessage {
   excludedTools?: string[];
   customTools?: CustomToolDefinition[];
   mcpServers?: McpServerDefinition[];
+  disabledSkills?: string[];
 }
 
 export interface SendMessage {
@@ -790,6 +791,7 @@ export interface NewSessionConfig {
   excludedTools?: string[];
   customTools?: CustomToolDefinition[];
   mcpServers?: McpServerDefinition[];
+  disabledSkills?: string[];
 }
 
 // ─── Settings (persisted to localStorage) ───────────────────────────────────
@@ -802,4 +804,15 @@ export interface PersistedSettings {
   excludedTools: string[];
   customTools: CustomToolDefinition[];
   mcpServers?: McpServerDefinition[];
+  disabledSkills?: string[];
+}
+
+// ─── Skill definitions ──────────────────────────────────────────────────────
+
+export interface SkillDefinition {
+  name: string;
+  description: string;
+  directory: string;
+  license?: string;
+  allowedTools?: string;
 }

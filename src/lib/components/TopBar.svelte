@@ -7,6 +7,7 @@
     connectionState: ConnectionState;
     sessionTitle: string | null;
     quotaSnapshots: QuotaSnapshots | null;
+    activeSkillCount: number;
     onToggleSidebar: () => void;
     onOpenModelSheet: () => void;
     onNewChat: () => void;
@@ -17,6 +18,7 @@
     connectionState,
     sessionTitle,
     quotaSnapshots,
+    activeSkillCount,
     onToggleSidebar,
     onOpenModelSheet,
     onNewChat,
@@ -64,6 +66,12 @@
       <path d="M2.5 4 L5 6.5 L7.5 4"/>
     </svg>
   </button>
+
+  {#if activeSkillCount > 0}
+    <span class="skill-badge" title="{activeSkillCount} skill{activeSkillCount > 1 ? 's' : ''} active">
+      ⚡ {activeSkillCount}
+    </span>
+  {/if}
 
   <button class="tb-btn newchat-btn" onclick={onNewChat} aria-label="New chat">
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -231,6 +239,19 @@
   .dot-disconnected {
     background: var(--red);
     box-shadow: 0 0 4px var(--red);
+  }
+
+  /* ── Skill badge ──────────────────────────────────────────────── */
+  .skill-badge {
+    font-family: var(--font-mono);
+    font-size: 0.7em;
+    color: var(--yellow);
+    background: rgba(250, 204, 21, 0.1);
+    border: 1px solid rgba(250, 204, 21, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   @keyframes pulse {

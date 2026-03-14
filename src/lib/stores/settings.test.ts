@@ -193,6 +193,7 @@ describe('createSettingsStore', () => {
           excludedTools: [],
           customTools: [],
           mcpServers: [],
+          disabledSkills: [],
         },
       }),
     });

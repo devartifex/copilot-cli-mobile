@@ -6,6 +6,7 @@
     QuotaSnapshot,
     CustomToolDefinition,
     McpServerDefinition,
+    SkillDefinition,
   } from '$lib/types/index.js';
   import { pickPrimaryQuota } from '$lib/types/index.js';
   import CustomToolsEditor from './CustomToolsEditor.svelte';
@@ -20,17 +21,21 @@
     excludedTools: string[];
     customTools: CustomToolDefinition[];
     mcpServers: McpServerDefinition[];
+    availableSkills: SkillDefinition[];
+    disabledSkills: string[];
     onClose: () => void;
     onSaveInstructions: (instructions: string) => void;
     onToggleTool: (toolName: string, enabled: boolean) => void;
     onSaveCustomTools: (tools: CustomToolDefinition[]) => void;
     onSaveMcpServers: (servers: McpServerDefinition[]) => void;
+    onToggleSkill: (skillName: string, enabled: boolean) => void;
     onSelectAgent: (name: string) => void;
     onDeselectAgent: () => void;
     onCompact: () => void;
     onFetchTools: () => void;
     onFetchAgents: () => void;
     onFetchQuota: () => void;
+    onFetchSkills: () => void;
   }
 
   const {
@@ -43,20 +48,24 @@
     excludedTools,
     customTools,
     mcpServers,
+    availableSkills,
+    disabledSkills,
     onClose,
     onSaveInstructions,
     onToggleTool,
     onSaveCustomTools,
     onSaveMcpServers,
+    onToggleSkill,
     onSelectAgent,
     onDeselectAgent,
     onCompact,
     onFetchTools,
     onFetchAgents,
     onFetchQuota,
+    onFetchSkills,
   }: Props = $props();
 
-  type AccordionSection = 'instructions' | 'tools' | 'mcp' | 'custom-tools' | 'agents' | 'quota' | 'compact' | null;
+  type AccordionSection = 'instructions' | 'tools' | 'mcp' | 'custom-tools' | 'agents' | 'skills' | 'quota' | 'compact' | null;
 
   let activeSection = $state<AccordionSection>(null);
   let instructionsDraft = $state('');
@@ -206,6 +215,7 @@
     if (section === 'tools') onFetchTools();
     if (section === 'agents') onFetchAgents();
     if (section === 'quota') onFetchQuota();
+    if (section === 'skills') onFetchSkills();
   }
 
   function handleBackdropClick(e: MouseEvent) {
@@ -509,6 +519,48 @@
                 Define webhook-based tools that Copilot can invoke during conversations.
               </p>
               <CustomToolsEditor tools={customTools} onSave={onSaveCustomTools} />
+            </div>
+          {/if}
+        </div>
+
+        <!-- Skills -->
+        <div class="settings-accordion">
+          <button
+            class="settings-accordion-btn"
+            class:open={activeSection === 'skills'}
+            onclick={() => toggleSection('skills')}
+          >
+            Skills
+            <span class="accordion-chevron">▸</span>
+          </button>
+          {#if activeSection === 'skills'}
+            <div class="settings-accordion-body">
+              <p class="settings-hint">
+                Skills are reusable prompt modules (SKILL.md) that inject specialized instructions into the session context.
+              </p>
+              {#if availableSkills.length === 0}
+                <p class="settings-hint">No skills available.</p>
+              {:else}
+                {#each availableSkills as skill (skill.name)}
+                  {@const isEnabled = !disabledSkills.includes(skill.name)}
+                  <div class="skill-item">
+                    <label class="skill-toggle">
+                      <input
+                        type="checkbox"
+                        checked={isEnabled}
+                        onchange={() => onToggleSkill(skill.name, !isEnabled)}
+                      />
+                      <span class="skill-name">{skill.name}</span>
+                    </label>
+                    {#if skill.description}
+                      <p class="skill-desc">{skill.description}</p>
+                    {/if}
+                    {#if skill.license}
+                      <span class="skill-meta">{skill.license}</span>
+                    {/if}
+                  </div>
+                {/each}
+              {/if}
             </div>
           {/if}
         </div>
@@ -946,5 +998,47 @@
   .action-btn.save {
     color: var(--purple);
     border-color: var(--purple-dim);
+  }
+
+  /* ── Skills ─────────────────────────────────────────────────────────────── */
+  .skill-item {
+    padding: var(--sp-2) var(--sp-1);
+    border-bottom: 1px solid var(--border);
+  }
+  .skill-item:last-child {
+    border-bottom: none;
+  }
+  .skill-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    cursor: pointer;
+  }
+  .skill-toggle input[type="checkbox"] {
+    accent-color: var(--purple);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+  .skill-name {
+    font-size: 0.85em;
+    font-weight: 500;
+    color: var(--fg);
+  }
+  .skill-desc {
+    font-size: 0.75em;
+    color: var(--fg-dim);
+    margin: var(--sp-1) 0 0 calc(16px + var(--sp-2));
+    line-height: 1.4;
+  }
+  .skill-meta {
+    display: inline-block;
+    font-size: 0.7em;
+    color: var(--fg-dim);
+    margin-left: calc(16px + var(--sp-2));
+    margin-top: var(--sp-1);
+    padding: 1px 6px;
+    background: var(--bg-overlay);
+    border-radius: var(--radius-sm);
   }
 </style>

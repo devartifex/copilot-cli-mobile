@@ -23,6 +23,7 @@
 | Plan mode & persistence | PlanPanel, plan handlers | ✅ | ❌ | ❌ | ✅ | **Good** | plan-mode.spec.ts covers CRUD, collapse, two-step delete |
 | Session management | session-metadata.ts, session-pool.ts, SessionsSheet | ✅ | ❌ | ❌ | ✅ | **Good** | session-management.spec.ts covers list/search/resume/delete |
 | Tools, MCP, permissions, agents | copilot/session.ts, PermissionPrompt, SettingsModal | ✅ | ❌ | ❌ | ✅ | **Good** | settings.spec.ts covers tools/agents, chat covers tool calls |
+| Skills (SKILL.md modules) | skills/scanner.ts, session.ts, SettingsModal, TopBar | ✅ | ❌ | ❌ | ❌ | Partial | scanner.test.ts covers discovery/parsing/caching; session.test.ts covers SDK wiring |
 | File attachments | upload route, ChatInput | ❌ | ✅ | ❌ | ❌ | Partial | Integration tests only |
 | Quota & usage telemetry | quota display, usage events | ❌ | ❌ | ❌ | ✅ | Partial | chat-messaging.spec.ts covers usage display |
 | Operational safety | hooks.server.ts, health, config | ✅ | ✅ | N/A | ✅ | **Good** | error-handling.spec.ts covers errors, health, 404 |
@@ -37,7 +38,8 @@
 | `src/lib/server/auth/session-utils.test.ts` | `src/lib/server/auth/session-utils.ts` | Save/clear helpers | ✅ |
 | `src/lib/server/settings-store.test.ts` | `src/lib/server/settings-store.ts` | JSON persistence, size cap | ✅ |
 | `src/lib/server/copilot/session-metadata.test.ts` | `src/lib/server/copilot/session-metadata.ts` | Listing, parsing, counting | ✅ |
-| `src/lib/server/copilot/session.test.ts` | `src/lib/server/copilot/session.ts` | SSRF protection, session lifecycle | ✅ |
+| `src/lib/server/copilot/session.test.ts` | `src/lib/server/copilot/session.ts` | SSRF protection, session lifecycle, skills wiring | ✅ |
+| `src/lib/server/skills/scanner.test.ts` | `src/lib/server/skills/scanner.ts` | Skill discovery, frontmatter parsing, caching | ✅ |
 | `src/lib/server/ws/session-pool.test.ts` | `src/lib/server/ws/session-pool.ts` | Lifecycle, TTL, eviction | ✅ |
 | `src/lib/utils/markdown.test.ts` | `src/lib/utils/markdown.ts` | Rendering, XSS, highlighting | ✅ |
 | `src/lib/utils/notifications.test.ts` | `src/lib/utils/notifications.ts` | Browser notification helpers | ✅ |

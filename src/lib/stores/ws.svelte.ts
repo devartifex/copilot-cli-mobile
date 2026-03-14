@@ -226,6 +226,7 @@ export function createWsStore(): WsStore {
       ...(config.excludedTools?.length && { excludedTools: config.excludedTools }),
       ...(config.customTools?.length && { customTools: config.customTools }),
       ...(config.mcpServers?.length && { mcpServers: config.mcpServers }),
+      ...(config.disabledSkills?.length && { disabledSkills: config.disabledSkills }),
     };
     send(msg);
   }

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { approveAll } from '@github/copilot-sdk';
 import { createCopilotClient } from '../copilot/client.js';
 import { createCopilotSession, getAvailableModels } from '../copilot/session.js';
-import { enrichSessionMetadata, getSessionDetail, getSessionStateDir, listSessionsFromFilesystem, buildSessionContext, deleteSessionFromFilesystem } from '../copilot/session-metadata.js';
+import { enrichSessionMetadata, getSessionDetail, getSessionStateDir, listSessionsFromFilesystem, buildSessionContext, deleteSessionFromFilesystem, isValidSessionId } from '../copilot/session-metadata.js';
 import { config } from '../config.js';
 import { logSecurity } from '../security-log.js';
 import { validateGitHubToken } from '../auth/github.js';
@@ -558,31 +558,7 @@ export function setupWebSocket(
 
               const customTools = Array.isArray(msg.customTools) ? msg.customTools.slice(0, 10) : undefined;
 
-              const mcpServers = Array.isArray(msg.mcpServers)
-                ? msg.mcpServers
-                    .filter((s: unknown) => {
-                      if (!s || typeof s !== 'object') return false;
-                      const obj = s as Record<string, unknown>;
-                      return (
-                        typeof obj.name === 'string' &&
-                        typeof obj.url === 'string' &&
-                        (obj.type === 'http' || obj.type === 'sse') &&
-                        typeof obj.headers === 'object' && obj.headers !== null &&
-                        Array.isArray(obj.tools)
-                      );
-                    })
-                    .slice(0, 10)
-                    .map((s: unknown) => {
-                      const obj = s as Record<string, unknown>;
-                      return {
-                        name: obj.name as string,
-                        url: obj.url as string,
-                        type: obj.type as 'http' | 'sse',
-                        headers: obj.headers as Record<string, string>,
-                        tools: (obj.tools as unknown[]).filter((t): t is string => typeof t === 'string'),
-                      };
-                    })
-                : undefined;
+              const mcpServers = parseMcpServers(msg.mcpServers);
 
               const disabledSkills = Array.isArray(msg.disabledSkills)
                 ? msg.disabledSkills.filter((s: unknown) => typeof s === 'string')
@@ -992,6 +968,10 @@ export function setupWebSocket(
               poolSend(connectionEntry, { type: 'error', message: 'Session ID is required' });
               return;
             }
+            if (!isValidSessionId(deleteId)) {
+              poolSend(connectionEntry, { type: 'error', message: 'Invalid session ID format' });
+              return;
+            }
 
             // Prevent deleting the active session
             if (connectionEntry.session?.sessionId === deleteId) {
@@ -1028,6 +1008,10 @@ export function setupWebSocket(
               poolSend(connectionEntry, { type: 'error', message: 'Session ID is required' });
               return;
             }
+            if (!isValidSessionId(detailId)) {
+              poolSend(connectionEntry, { type: 'error', message: 'Invalid session ID format' });
+              return;
+            }
 
             try {
               console.log('[DEBUG get_session_detail] Calling getSessionDetail…');
@@ -1052,6 +1036,10 @@ export function setupWebSocket(
               poolSend(connectionEntry, { type: 'error', message: 'Session ID is required' });
               return;
             }
+            if (!isValidSessionId(sessionId)) {
+              poolSend(connectionEntry, { type: 'error', message: 'Invalid session ID format' });
+              return;
+            }
 
             if (connectionEntry.session) {
               try { await connectionEntry.session.disconnect(); } catch { /* ignore */ }
@@ -1059,6 +1047,7 @@ export function setupWebSocket(
             }
             connectionEntry.userInputResolve = null;
             connectionEntry.permissionResolve = null;
+            connectionEntry.isProcessing = false;
 
             try {
               // start() is idempotent — ensures the SDK has indexed all local sessions

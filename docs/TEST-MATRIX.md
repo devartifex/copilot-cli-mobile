@@ -18,7 +18,7 @@
 |---|---|---|---|---|---|---|---|
 | Authentication & access control | guard.ts, session-utils.ts, device-flow routes | ✅ | ✅ | ❌ | ✅ | **Good** | auth-flow.spec.ts covers full device flow + logout |
 | Chat application shell | TopBar, Sidebar, Banner, stores | ❌ | ❌ | ❌ | ✅ | Partial | chat-messaging.spec.ts + responsive-chat.spec.ts |
-| Real-time messaging & streaming | ws/handler.ts, chat.svelte.ts, markdown.ts | ✅ | ❌ | ❌ | ✅ | **Good** | chat-messaging.spec.ts covers deltas, streaming, stop |
+| Real-time messaging & streaming | ws/handler.ts, chat.svelte.ts, markdown.ts | ✅ | ❌ | ❌ | ✅ | **Good** | chat-messaging.spec.ts covers deltas, streaming, stop; chat.test.ts covers all 49 SDK event types |
 | Model selection & mode switching | ModelSheet, chat store | ❌ | ❌ | ❌ | ✅ | Partial | model-selection.spec.ts covers sheet, switch, reasoning |
 | Plan mode & persistence | PlanPanel, plan handlers | ✅ | ❌ | ❌ | ✅ | **Good** | plan-mode.spec.ts covers CRUD, collapse, two-step delete |
 | Session management | session-metadata.ts, session-pool.ts, SessionsSheet | ✅ | ❌ | ❌ | ✅ | **Good** | session-management.spec.ts covers list/search/resume/delete |

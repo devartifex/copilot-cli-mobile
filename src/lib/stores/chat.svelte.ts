@@ -527,6 +527,34 @@ export function createChatStore(wsStore: WsStore): ChatStore {
         reasoningEffort = msg.effort;
         addInfoMessage(`Reasoning effort set to ${msg.effort}`);
         break;
+
+      case 'session_idle':
+        isStreaming = false;
+        isWaiting = false;
+        break;
+
+      case 'task_complete':
+        if (msg.summary) {
+          addInfoMessage(`Task complete: ${msg.summary}`);
+        }
+        break;
+
+      case 'truncation':
+        addInfoMessage(
+          `Context truncated: ${msg.preTruncationMessages} → ${msg.postTruncationMessages} messages` +
+          ` (${msg.preTruncationTokens} → ${msg.postTruncationTokens} tokens)`,
+        );
+        break;
+
+      case 'tool_partial_result':
+        // Partial tool output — update the existing tool call if tracked
+        break;
+
+      case 'context_changed':
+        break;
+
+      case 'workspace_file_changed':
+        break;
     }
   }
 

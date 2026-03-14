@@ -488,4 +488,61 @@ describe('createChatStore', () => {
       expect.objectContaining({ role: 'info', content: 'Session ended · 5 premium requests · 3.2s total API time' }),
     ]);
   });
+
+  it('handles session_idle, task_complete, truncation, and workspace_file_changed events', () => {
+    const store = createChatStore(createWsStoreMock());
+
+    // session.idle clears streaming/waiting flags
+    dispatch(store, { type: 'turn_start' });
+    expect(store.isWaiting).toBe(true);
+    dispatch(store, { type: 'delta', content: 'data' });
+    expect(store.isStreaming).toBe(true);
+    dispatch(store, { type: 'session_idle' });
+    expect(store.isStreaming).toBe(false);
+    expect(store.isWaiting).toBe(false);
+
+    store.clearMessages();
+
+    // task_complete with summary adds info message
+    dispatch(store, { type: 'task_complete', summary: 'Refactored auth module' });
+    expect(store.messages).toEqual([
+      expect.objectContaining({ role: 'info', content: 'Task complete: Refactored auth module' }),
+    ]);
+
+    store.clearMessages();
+
+    // task_complete without summary adds nothing
+    dispatch(store, { type: 'task_complete' });
+    expect(store.messages).toEqual([]);
+
+    store.clearMessages();
+
+    // truncation adds descriptive info message
+    dispatch(store, {
+      type: 'truncation',
+      tokenLimit: 128000,
+      preTruncationTokens: 100000,
+      preTruncationMessages: 50,
+      postTruncationTokens: 60000,
+      postTruncationMessages: 30,
+    });
+    expect(store.messages).toEqual([
+      expect.objectContaining({
+        role: 'info',
+        content: 'Context truncated: 50 → 30 messages (100000 → 60000 tokens)',
+      }),
+    ]);
+
+    store.clearMessages();
+
+    // context_changed and workspace_file_changed are accepted without error
+    dispatch(
+      store,
+      { type: 'context_changed', cwd: '/tmp', gitRoot: '/tmp', repository: 'o/r', branch: 'main' },
+      { type: 'workspace_file_changed', path: 'plan.md', operation: 'update' },
+      { type: 'tool_partial_result', toolCallId: 'tc-1', partialOutput: 'partial data' },
+    );
+    // These events don't produce visible messages but should not throw
+    expect(store.messages).toEqual([]);
+  });
 });

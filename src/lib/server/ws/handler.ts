@@ -184,6 +184,60 @@ function wireSessionEvents(session: any, entry: PoolEntry, sessionId?: string): 
   });
   session.on('exit_plan_mode.requested', () => { poolSend(entry, { type: 'exit_plan_mode_requested' }); });
   session.on('exit_plan_mode.completed', () => { poolSend(entry, { type: 'exit_plan_mode_completed' }); });
+  session.on('session.idle', (event: any) => {
+    poolSend(entry, { type: 'session_idle', backgroundTasks: event.data?.backgroundTasks });
+  });
+  session.on('session.task_complete', (event: any) => {
+    poolSend(entry, { type: 'task_complete', summary: event.data?.summary });
+  });
+  session.on('session.truncation', (event: any) => {
+    poolSend(entry, {
+      type: 'truncation',
+      tokenLimit: event.data?.tokenLimit,
+      preTruncationTokens: event.data?.preTruncationTokensInMessages,
+      preTruncationMessages: event.data?.preTruncationMessagesLength,
+      postTruncationTokens: event.data?.postTruncationTokensInMessages,
+      postTruncationMessages: event.data?.postTruncationMessagesLength,
+    });
+  });
+  session.on('tool.execution_partial_result', (event: any) => {
+    poolSend(entry, { type: 'tool_partial_result', toolCallId: event.data?.toolCallId, partialOutput: event.data?.partialOutput });
+  });
+  session.on('session.context_changed', (event: any) => {
+    poolSend(entry, {
+      type: 'context_changed',
+      cwd: event.data?.cwd,
+      gitRoot: event.data?.gitRoot,
+      repository: event.data?.repository,
+      branch: event.data?.branch,
+    });
+  });
+  session.on('session.workspace_file_changed', (event: any) => {
+    poolSend(entry, { type: 'workspace_file_changed', path: event.data?.path, operation: event.data?.operation });
+  });
+
+  // Catch-all: log unhandled event types for debugging / future audit
+  const handledTypes = new Set([
+    'assistant.message_delta', 'assistant.reasoning_delta', 'assistant.reasoning',
+    'assistant.intent', 'assistant.turn_start', 'assistant.turn_end', 'assistant.usage',
+    'tool.execution_start', 'tool.execution_complete', 'tool.execution_progress',
+    'tool.execution_partial_result',
+    'session.mode_changed', 'session.error', 'session.title_changed',
+    'session.warning', 'session.usage_info', 'session.info',
+    'session.plan_changed', 'session.compaction_start', 'session.compaction_complete',
+    'session.shutdown', 'session.model_change', 'session.idle', 'session.task_complete',
+    'session.truncation', 'session.context_changed', 'session.workspace_file_changed',
+    'subagent.started', 'subagent.completed', 'subagent.failed',
+    'subagent.selected', 'subagent.deselected',
+    'skill.invoked',
+    'elicitation.requested', 'elicitation.completed',
+    'exit_plan_mode.requested', 'exit_plan_mode.completed',
+  ]);
+  session.on((event: any) => {
+    if (!handledTypes.has(event.type)) {
+      console.log('[EVENT] unhandled SDK event:', event.type, JSON.stringify(event.data ?? {}).slice(0, 200));
+    }
+  });
 }
 
 function makeUserInputHandler(entry: PoolEntry) {

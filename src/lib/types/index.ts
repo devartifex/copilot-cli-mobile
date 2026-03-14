@@ -432,6 +432,47 @@ export interface SessionShutdownMessage {
   sessionStartTime?: string;
 }
 
+export interface SessionIdleMessage {
+  type: 'session_idle';
+  backgroundTasks?: {
+    agents: Array<{ agentId: string; agentType: string }>;
+  };
+}
+
+export interface TaskCompleteMessage {
+  type: 'task_complete';
+  summary?: string;
+}
+
+export interface TruncationMessage {
+  type: 'truncation';
+  tokenLimit: number;
+  preTruncationTokens: number;
+  preTruncationMessages: number;
+  postTruncationTokens: number;
+  postTruncationMessages: number;
+}
+
+export interface ToolPartialResultMessage {
+  type: 'tool_partial_result';
+  toolCallId: string;
+  partialOutput: string;
+}
+
+export interface ContextChangedMessage {
+  type: 'context_changed';
+  cwd: string;
+  gitRoot?: string;
+  repository?: string;
+  branch?: string;
+}
+
+export interface WorkspaceFileChangedMessage {
+  type: 'workspace_file_changed';
+  path: string;
+  operation: 'create' | 'update';
+}
+
 export interface SessionUsageTotals {
   inputTokens: number;
   outputTokens: number;
@@ -496,7 +537,13 @@ export type ServerMessage =
   | ExitPlanModeCompletedMessage
   | ContextInfoMessage
   | ReasoningChangedMessage
-  | SessionShutdownMessage;
+  | SessionShutdownMessage
+  | SessionIdleMessage
+  | TaskCompleteMessage
+  | TruncationMessage
+  | ToolPartialResultMessage
+  | ContextChangedMessage
+  | WorkspaceFileChangedMessage;
 
 // ─── File attachment ─────────────────────────────────────────────────────────
 

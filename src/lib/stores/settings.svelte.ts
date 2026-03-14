@@ -6,13 +6,12 @@ import type {
   CustomAgentDefinition,
   McpServerDefinition,
   SkillDefinition,
-  InfiniteSessionsSettings,
-  ProviderDefinition,
+  InfiniteSessionsConfig,
 } from '$lib/types/index.js';
 
 const STORAGE_KEY = 'copilot-cli-settings';
 
-const DEFAULT_INFINITE_SESSIONS: InfiniteSessionsSettings = {
+const DEFAULT_INFINITE_SESSIONS: InfiniteSessionsConfig = {
   enabled: true,
   backgroundThreshold: 0.80,
   bufferThreshold: 0.95,
@@ -72,21 +71,6 @@ function isValidMcpServer(s: unknown): s is McpServerDefinition {
   );
 }
 
-const VALID_PROVIDER_TYPES = new Set(['openai', 'azure', 'anthropic']);
-const VALID_WIRE_APIS = new Set(['completions', 'responses']);
-
-function isValidProvider(p: unknown): p is ProviderDefinition {
-  if (!p || typeof p !== 'object') return false;
-  const obj = p as Record<string, unknown>;
-  if (typeof obj.baseUrl !== 'string' || !obj.baseUrl) return false;
-  if (obj.apiKey !== undefined && typeof obj.apiKey !== 'string') return false;
-  if (obj.bearerToken !== undefined && typeof obj.bearerToken !== 'string') return false;
-  if (obj.type !== undefined && (typeof obj.type !== 'string' || !VALID_PROVIDER_TYPES.has(obj.type))) return false;
-  if (obj.wireApi !== undefined && (typeof obj.wireApi !== 'string' || !VALID_WIRE_APIS.has(obj.wireApi))) return false;
-  if (obj.azureApiVersion !== undefined && typeof obj.azureApiVersion !== 'string') return false;
-  return true;
-}
-
 export interface SettingsStore {
   customInstructions: string;
   excludedTools: string[];
@@ -98,8 +82,7 @@ export interface SettingsStore {
   mcpServers: McpServerDefinition[];
   disabledSkills: string[];
   availableSkills: SkillDefinition[];
-  infiniteSessions: InfiniteSessionsSettings;
-  provider: ProviderDefinition | undefined;
+  infiniteSessions: InfiniteSessionsConfig;
   load(): void;
   save(): void;
   syncFromServer(): Promise<void>;
@@ -117,8 +100,7 @@ export function createSettingsStore(): SettingsStore {
   let mcpServers = $state<McpServerDefinition[]>([...(DEFAULT_SETTINGS.mcpServers ?? [])]);
   let disabledSkills = $state<string[]>([...(DEFAULT_SETTINGS.disabledSkills ?? [])]);
   let availableSkills = $state<SkillDefinition[]>([]);
-  let infiniteSessions = $state<InfiniteSessionsSettings>({ ...DEFAULT_INFINITE_SESSIONS });
-  let provider = $state<ProviderDefinition | undefined>(undefined);
+  let infiniteSessions = $state<InfiniteSessionsConfig>({ ...DEFAULT_INFINITE_SESSIONS });
 
   function load(): void {
     if (typeof localStorage === 'undefined') return;
@@ -174,14 +156,14 @@ export function createSettingsStore(): SettingsStore {
       disabledSkills = parsed.disabledSkills.filter((s): s is string => typeof s === 'string');
     }
     if (parsed.infiniteSessions && typeof parsed.infiniteSessions === 'object') {
-      const inf = parsed.infiniteSessions;
+      const is = parsed.infiniteSessions;
       infiniteSessions = {
-        enabled: inf.enabled !== false,
-        backgroundThreshold: typeof inf.backgroundThreshold === 'number'
-          ? Math.max(0, Math.min(1, inf.backgroundThreshold))
+        enabled: typeof is.enabled === 'boolean' ? is.enabled : DEFAULT_INFINITE_SESSIONS.enabled,
+        backgroundThreshold: typeof is.backgroundThreshold === 'number'
+          ? Math.max(0, Math.min(1, is.backgroundThreshold))
           : DEFAULT_INFINITE_SESSIONS.backgroundThreshold,
-        bufferThreshold: typeof inf.bufferThreshold === 'number'
-          ? Math.max(0, Math.min(1, inf.bufferThreshold))
+        bufferThreshold: typeof is.bufferThreshold === 'number'
+          ? Math.max(0, Math.min(1, is.bufferThreshold))
           : DEFAULT_INFINITE_SESSIONS.bufferThreshold,
       };
     }
@@ -275,11 +257,15 @@ export function createSettingsStore(): SettingsStore {
     set availableSkills(v: SkillDefinition[]) { availableSkills = v; },
 
     get infiniteSessions() { return infiniteSessions; },
-    set infiniteSessions(v: InfiniteSessionsSettings) {
+    set infiniteSessions(v: InfiniteSessionsConfig) {
       infiniteSessions = {
-        enabled: v.enabled,
-        backgroundThreshold: Math.max(0, Math.min(1, v.backgroundThreshold)),
-        bufferThreshold: Math.max(0, Math.min(1, v.bufferThreshold)),
+        enabled: typeof v.enabled === 'boolean' ? v.enabled : DEFAULT_INFINITE_SESSIONS.enabled,
+        backgroundThreshold: typeof v.backgroundThreshold === 'number'
+          ? Math.max(0, Math.min(1, v.backgroundThreshold))
+          : DEFAULT_INFINITE_SESSIONS.backgroundThreshold,
+        bufferThreshold: typeof v.bufferThreshold === 'number'
+          ? Math.max(0, Math.min(1, v.bufferThreshold))
+          : DEFAULT_INFINITE_SESSIONS.bufferThreshold,
       };
       save();
     },

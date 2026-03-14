@@ -620,24 +620,10 @@ export type Attachment =
 
 // ─── Outgoing client messages (discriminated union on `type`) ────────────────
 
-export interface InfiniteSessionsSettings {
+export interface InfiniteSessionsConfig {
   enabled: boolean;
   backgroundThreshold: number;
   bufferThreshold: number;
-}
-
-// ─── BYOK provider definitions ──────────────────────────────────────────────
-
-export type ProviderType = 'openai' | 'azure' | 'anthropic';
-export type ProviderWireApi = 'completions' | 'responses';
-
-export interface ProviderDefinition {
-  baseUrl: string;
-  apiKey?: string;
-  bearerToken?: string;
-  type?: ProviderType;
-  wireApi?: ProviderWireApi;
-  azureApiVersion?: string;
 }
 
 export interface NewSessionMessage {
@@ -651,8 +637,7 @@ export interface NewSessionMessage {
   mcpServers?: McpServerDefinition[];
   disabledSkills?: string[];
   customAgents?: CustomAgentDefinition[];
-  infiniteSessions?: InfiniteSessionsSettings;
-  provider?: ProviderDefinition;
+  infiniteSessions?: InfiniteSessionsConfig;
 }
 
 export type MessageDeliveryMode = 'immediate' | 'enqueue';
@@ -893,8 +878,7 @@ export interface NewSessionConfig {
   mcpServers?: McpServerDefinition[];
   disabledSkills?: string[];
   customAgents?: CustomAgentDefinition[];
-  infiniteSessions?: InfiniteSessionsSettings;
-  provider?: ProviderDefinition;
+  infiniteSessions?: InfiniteSessionsConfig;
 }
 
 // ─── Settings (persisted to localStorage) ───────────────────────────────────
@@ -909,8 +893,7 @@ export interface PersistedSettings {
   mcpServers?: McpServerDefinition[];
   disabledSkills?: string[];
   customAgents?: CustomAgentDefinition[];
-  infiniteSessions?: InfiniteSessionsSettings;
-  provider?: ProviderDefinition;
+  infiniteSessions?: InfiniteSessionsConfig;
 }
 
 // ─── Custom agent definitions ───────────────────────────────────────────────

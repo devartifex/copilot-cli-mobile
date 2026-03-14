@@ -1,4 +1,5 @@
 import type {
+  Attachment,
   ChatMessage,
   ChatMessageRole,
   ToolCallState,
@@ -66,7 +67,7 @@ export interface ChatStore {
   // Methods
   handleServerMessage(msg: ServerMessage): void;
   clearMessages(): void;
-  addUserMessage(content: string): void;
+  addUserMessage(content: string, attachments?: Attachment[]): void;
   clearPendingPermission(): void;
   clearPendingUserInput(): void;
 }
@@ -702,8 +703,8 @@ export function createChatStore(wsStore: WsStore): ChatStore {
     sessionTotals = { ...emptyTotals };
   }
 
-  function addUserMessage(content: string): void {
-    addMessage('user', content);
+  function addUserMessage(content: string, attachments?: Attachment[]): void {
+    addMessage('user', content, attachments?.length ? { attachments } : undefined);
   }
 
   function clearPendingPermission(): void {

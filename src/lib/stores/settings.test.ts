@@ -3,7 +3,6 @@ import { createSettingsStore } from '$lib/stores/settings.svelte.js';
 import type {
   CustomAgentDefinition,
   CustomToolDefinition,
-  InfiniteSessionsSettings,
   McpServerDefinition,
   PersistedSettings,
 } from '$lib/types/index.js';
@@ -71,11 +70,6 @@ describe('createSettingsStore', () => {
     expect(store.customTools).toEqual([]);
     expect(store.customAgents).toEqual([]);
     expect(store.mcpServers).toEqual([]);
-    expect(store.infiniteSessions).toEqual({
-      enabled: true,
-      backgroundThreshold: 0.80,
-      bufferThreshold: 0.95,
-    });
   });
 
   it('persists setter updates to localStorage and syncs them to the server', () => {
@@ -93,9 +87,6 @@ describe('createSettingsStore', () => {
     store.customAgents = agents;
     store.mcpServers = servers;
 
-    const customInfinite: InfiniteSessionsSettings = { enabled: false, backgroundThreshold: 0.60, bufferThreshold: 0.90 };
-    store.infiniteSessions = customInfinite;
-
     const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as PersistedSettings;
 
     expect(store.customTools).toHaveLength(10);
@@ -111,8 +102,7 @@ describe('createSettingsStore', () => {
     expect(persisted.customTools).toHaveLength(10);
     expect(persisted.customAgents).toHaveLength(10);
     expect(persisted.mcpServers).toHaveLength(10);
-    expect(persisted.infiniteSessions).toEqual({ enabled: false, backgroundThreshold: 0.60, bufferThreshold: 0.90 });
-    expect(fetchMock).toHaveBeenCalledTimes(9);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
     expect(fetchMock).toHaveBeenLastCalledWith('/api/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -210,7 +200,6 @@ describe('createSettingsStore', () => {
           customTools: [makeCustomTool('server-tool')],
           customAgents: [makeCustomAgent('server-agent')],
           mcpServers: [makeMcpServer('server-mcp')],
-          infiniteSessions: { enabled: false, backgroundThreshold: 0.70, bufferThreshold: 0.85 },
         },
       }),
     );
@@ -227,7 +216,6 @@ describe('createSettingsStore', () => {
     expect(store.customTools).toEqual([makeCustomTool('server-tool')]);
     expect(store.customAgents).toEqual([makeCustomAgent('server-agent')]);
     expect(store.mcpServers).toEqual([makeMcpServer('server-mcp')]);
-    expect(store.infiniteSessions).toEqual({ enabled: false, backgroundThreshold: 0.70, bufferThreshold: 0.85 });
 
     const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as PersistedSettings;
     expect(persisted.mode).toBe('interactive');
@@ -260,49 +248,6 @@ describe('createSettingsStore', () => {
           infiniteSessions: { enabled: true, backgroundThreshold: 0.80, bufferThreshold: 0.95 },
         },
       }),
-    });
-  });
-
-  it('clamps infinite session thresholds to [0, 1] on load and setter', () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        infiniteSessions: { enabled: true, backgroundThreshold: 1.5, bufferThreshold: -0.3 },
-      }),
-    );
-
-    const store = createSettingsStore();
-    store.load();
-
-    expect(store.infiniteSessions).toEqual({
-      enabled: true,
-      backgroundThreshold: 1.0,
-      bufferThreshold: 0.0,
-    });
-
-    store.infiniteSessions = { enabled: false, backgroundThreshold: 2.0, bufferThreshold: -1.0 };
-    expect(store.infiniteSessions).toEqual({
-      enabled: false,
-      backgroundThreshold: 1.0,
-      bufferThreshold: 0.0,
-    });
-  });
-
-  it('uses defaults for missing infinite session threshold fields', () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        infiniteSessions: { enabled: false },
-      }),
-    );
-
-    const store = createSettingsStore();
-    store.load();
-
-    expect(store.infiniteSessions).toEqual({
-      enabled: false,
-      backgroundThreshold: 0.80,
-      bufferThreshold: 0.95,
     });
   });
 });

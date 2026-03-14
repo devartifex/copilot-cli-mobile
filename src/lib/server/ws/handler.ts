@@ -42,54 +42,6 @@ export function isValidAttachmentPath(filePath: string): boolean {
   return resolved.startsWith(UPLOAD_DIR_PREFIX + '/');
 }
 
-/** Get workspace root via git, fallback to cwd */
-function getWorkspaceRoot(): string {
-  try {
-    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
-  } catch {
-    return process.cwd();
-  }
-}
-
-/** Regex to match @file mentions: @path/to/file.ext (word-boundary start, non-whitespace path) */
-const FILE_MENTION_RE = /(?:^|\s)@((?:[^\s@]+\/)*[^\s@]+\.[a-zA-Z0-9]+)/g;
-
-/** Parse @path/to/file tokens from message content. Returns resolved file attachments and cleaned prompt. */
-export async function resolveFileMentions(
-  content: string,
-): Promise<{ prompt: string; fileAttachments: Array<{ type: 'file'; path: string; displayName: string }> }> {
-  const workspaceRoot = getWorkspaceRoot();
-  const mentions = [...content.matchAll(FILE_MENTION_RE)];
-  const fileAttachments: Array<{ type: 'file'; path: string; displayName: string }> = [];
-  const seen = new Set<string>();
-
-  for (const match of mentions) {
-    const relativePath = match[1];
-    const absolutePath = resolve(workspaceRoot, relativePath);
-
-    // Security: must be inside workspace
-    if (!absolutePath.startsWith(workspaceRoot + '/')) continue;
-    // Deduplicate
-    if (seen.has(absolutePath)) continue;
-
-    // Check file exists
-    try {
-      await access(absolutePath);
-    } catch {
-      continue;
-    }
-
-    seen.add(absolutePath);
-    fileAttachments.push({
-      type: 'file',
-      path: absolutePath,
-      displayName: basename(relativePath),
-    });
-  }
-
-  return { prompt: content, fileAttachments };
-}
-
 /** SDK attachment union – mirrors the types accepted by session.send(). */
 type SdkAttachment =
   | { type: 'file'; path: string; displayName?: string }
@@ -137,6 +89,52 @@ export function mapAttachmentsToSdk(raw: unknown): SdkAttachment[] | undefined {
   }
 
   return mapped.length ? mapped : undefined;
+}
+
+/** Get workspace root via git, fallback to cwd */
+function getWorkspaceRoot(): string {
+  try {
+    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
+  } catch {
+    return process.cwd();
+  }
+}
+
+/** Regex to match @file mentions: @path/to/file.ext */
+const FILE_MENTION_RE = /(?:^|\s)@((?:[^\s@]+\/)*[^\s@]+\.[a-zA-Z0-9]+)/g;
+
+/** Parse @path/to/file tokens from message content. Returns resolved file attachments and cleaned prompt. */
+export async function resolveFileMentions(
+  content: string,
+): Promise<{ prompt: string; fileAttachments: Array<{ type: 'file'; path: string; displayName: string }> }> {
+  const workspaceRoot = getWorkspaceRoot();
+  const mentions = [...content.matchAll(FILE_MENTION_RE)];
+  const fileAttachments: Array<{ type: 'file'; path: string; displayName: string }> = [];
+  const seen = new Set<string>();
+
+  for (const match of mentions) {
+    const relativePath = match[1];
+    const absolutePath = resolve(workspaceRoot, relativePath);
+
+    // Security: must be inside workspace
+    if (!absolutePath.startsWith(workspaceRoot + '/')) continue;
+    if (seen.has(absolutePath)) continue;
+
+    try {
+      await access(absolutePath);
+    } catch {
+      continue;
+    }
+
+    seen.add(absolutePath);
+    fileAttachments.push({
+      type: 'file',
+      path: absolutePath,
+      displayName: basename(relativePath),
+    });
+  }
+
+  return { prompt: content, fileAttachments };
 }
 
 /** Parse and validate MCP server entries from a WebSocket message, filtering out disabled servers. */
@@ -714,20 +712,6 @@ export function setupWebSocket(
                     })
                 : undefined;
 
-              const VALID_PROVIDER_TYPES = new Set(['openai', 'azure', 'anthropic']);
-              const VALID_WIRE_APIS = new Set(['completions', 'responses']);
-              const provider = msg.provider && typeof msg.provider === 'object'
-                && typeof msg.provider.baseUrl === 'string' && msg.provider.baseUrl
-                ? {
-                    baseUrl: msg.provider.baseUrl,
-                    ...(typeof msg.provider.apiKey === 'string' && msg.provider.apiKey && { apiKey: msg.provider.apiKey }),
-                    ...(typeof msg.provider.bearerToken === 'string' && msg.provider.bearerToken && { bearerToken: msg.provider.bearerToken }),
-                    ...(typeof msg.provider.type === 'string' && VALID_PROVIDER_TYPES.has(msg.provider.type) && { type: msg.provider.type as 'openai' | 'azure' | 'anthropic' }),
-                    ...(typeof msg.provider.wireApi === 'string' && VALID_WIRE_APIS.has(msg.provider.wireApi) && { wireApi: msg.provider.wireApi as 'completions' | 'responses' }),
-                    ...(typeof msg.provider.azureApiVersion === 'string' && msg.provider.azureApiVersion && { azureApiVersion: msg.provider.azureApiVersion }),
-                  }
-                : undefined;
-
               const skillDirectories = await getSkillDirectories();
 
               connectionEntry.session = await createCopilotSession(connectionEntry.client, githubToken, {
@@ -745,7 +729,6 @@ export function setupWebSocket(
                 skillDirectories,
                 disabledSkills,
                 customAgents,
-                provider,
                 onHookEvent: (message) => poolSend(connectionEntry, message),
               });
 
@@ -787,14 +770,11 @@ export function setupWebSocket(
               return;
             }
 
-            const uploadAttachments = mapAttachmentsToSdk(msg.attachments);
+            const uploadAttachments = mapAttachmentsToSdk(msg.attachments) ?? [];
 
             // Resolve @file mentions from the message content
             const { prompt, fileAttachments: mentionAttachments } = await resolveFileMentions(content);
-            const allAttachments = [
-              ...(uploadAttachments ?? []),
-              ...mentionAttachments,
-            ];
+            const allAttachments = [...uploadAttachments, ...mentionAttachments];
 
             connectionEntry.isProcessing = true;
             const sendMode = msg.mode === 'immediate' || msg.mode === 'enqueue' ? msg.mode : undefined;

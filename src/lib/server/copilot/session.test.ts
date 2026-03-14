@@ -494,6 +494,7 @@ describe('createCopilotSession', () => {
     const config = getSessionConfig(client);
     expect(config.hooks).toBeUndefined();
   });
+
 });
 
 describe('buildSessionHooks', () => {

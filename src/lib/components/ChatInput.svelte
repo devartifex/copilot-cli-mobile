@@ -388,10 +388,11 @@
           {#if onFleet}
             <button
               class="mode-btn fleet-btn"
-              onclick={() => { inputValue = '/fleet '; textareaEl?.focus(); }}
+              class:active={mode === 'autopilot' && inputValue.startsWith('/fleet')}
+              onclick={() => { onSetMode('autopilot'); inputValue = '/fleet '; textareaEl?.focus(); }}
               disabled={isDisabled && !pendingUserInput}
               aria-label="Fleet mode"
-              title="Parallel sub-agents: type /fleet followed by your task"
+              title="Switch to Agent mode and run parallel sub-agents"
             >
               ⚡ Fleet
             </button>

@@ -36,6 +36,12 @@
     new Set(chatStore.tools.filter(t => t.mcpServerName).map(t => t.mcpServerName)).size
   );
 
+  const supportsVision = $derived.by(() => {
+    const model = settings.selectedModel || 'gpt-4.1';
+    const info = chatStore.models.get(model);
+    return info?.capabilities?.supports?.vision === true;
+  });
+
   const activeSkillCount = $derived(
     settings.availableSkills.length - settings.disabledSkills.length
   );
@@ -295,6 +301,7 @@
         isStreaming={chatStore.isStreaming}
         isWaiting={chatStore.isWaiting}
         mode={chatStore.mode}
+        supportsVision={supportsVision}
         pendingUserInput={chatStore.pendingUserInput}
         onSend={handleSend}
         onAbort={() => wsStore.abort()}

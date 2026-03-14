@@ -44,6 +44,14 @@ This application follows security best practices:
 - **WebSocket**: Origin validation, session-based auth, message type whitelist, 10K char limit
 - **Infrastructure**: Managed identity for registry pull, HTTPS-only ingress, secrets stored natively in Container Apps (encrypted at rest)
 
+## GitHub Secret Scanning
+
+GitHub secret scanning and push protection are enabled for this repository.
+
+- **Secret scanning** continuously scans committed content for supported credentials and other known secret formats.
+- **Push protection** blocks supported secrets before they are pushed, helping prevent accidental credential exposure.
+- **Repo admins** can re-run `scripts/setup-security.sh` to verify these settings or re-apply them if needed.
+
 ## Self-Hosting Security Checklist
 
 If you deploy your own instance:

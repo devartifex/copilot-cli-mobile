@@ -14,7 +14,7 @@
   import { createWsStore } from '$lib/stores/ws.svelte.js';
   import { createChatStore } from '$lib/stores/chat.svelte.js';
   import { createSettingsStore } from '$lib/stores/settings.svelte.js';
-  import type { SessionMode, ReasoningEffort } from '$lib/types/index.js';
+  import type { Attachment, SessionMode, ReasoningEffort } from '$lib/types/index.js';
 
   let { data } = $props();
 
@@ -144,10 +144,11 @@
       ...(settings.customAgents.length > 0 && { customAgents: settings.customAgents }),
       ...(settings.mcpServers.length > 0 && { mcpServers: settings.mcpServers.filter(s => s.enabled) }),
       ...(settings.disabledSkills.length > 0 && { disabledSkills: settings.disabledSkills }),
+      infiniteSessions: settings.infiniteSessions,
     });
   }
 
-  function handleSend(content: string, attachments?: Array<{ path: string; name: string; type: string }>): void {
+  function handleSend(content: string, attachments?: Attachment[]): void {
     const trimmed = content.trim();
 
     // Handle /fleet command — with or without trailing space
@@ -163,7 +164,7 @@
       return;
     }
 
-    chatStore.addUserMessage(content);
+    chatStore.addUserMessage(content, attachments);
     const mode = chatStore.isStreaming ? 'immediate' : undefined;
     wsStore.sendMessage(content, attachments, mode);
   }

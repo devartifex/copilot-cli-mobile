@@ -592,7 +592,7 @@ export type ServerMessage =
   | HookSessionEndMessage
   | HookErrorMessage;
 
-// ─── File attachment ─────────────────────────────────────────────────────────
+// ─── File attachment (upload metadata) ───────────────────────────────────────
 
 export interface FileAttachment {
   path: string;
@@ -601,7 +601,44 @@ export interface FileAttachment {
   type: string;
 }
 
+// ─── SDK attachment types (file, directory, selection) ───────────────────────
+
+export type Attachment =
+  | { type: 'file'; path: string; name: string; displayName?: string }
+  | { type: 'directory'; path: string; name: string; displayName?: string }
+  | {
+      type: 'selection';
+      filePath: string;
+      name: string;
+      displayName: string;
+      selection?: {
+        start: { line: number; character: number };
+        end: { line: number; character: number };
+      };
+      text?: string;
+    };
+
 // ─── Outgoing client messages (discriminated union on `type`) ────────────────
+
+export interface InfiniteSessionsSettings {
+  enabled: boolean;
+  backgroundThreshold: number;
+  bufferThreshold: number;
+}
+
+// ─── BYOK provider definitions ──────────────────────────────────────────────
+
+export type ProviderType = 'openai' | 'azure' | 'anthropic';
+export type ProviderWireApi = 'completions' | 'responses';
+
+export interface ProviderDefinition {
+  baseUrl: string;
+  apiKey?: string;
+  bearerToken?: string;
+  type?: ProviderType;
+  wireApi?: ProviderWireApi;
+  azureApiVersion?: string;
+}
 
 export interface NewSessionMessage {
   type: 'new_session';
@@ -614,6 +651,8 @@ export interface NewSessionMessage {
   mcpServers?: McpServerDefinition[];
   disabledSkills?: string[];
   customAgents?: CustomAgentDefinition[];
+  infiniteSessions?: InfiniteSessionsSettings;
+  provider?: ProviderDefinition;
 }
 
 export type MessageDeliveryMode = 'immediate' | 'enqueue';
@@ -621,7 +660,7 @@ export type MessageDeliveryMode = 'immediate' | 'enqueue';
 export interface SendMessage {
   type: 'message';
   content: string;
-  attachments?: Array<{ path: string; name: string; type: string }>;
+  attachments?: Attachment[];
   mode?: MessageDeliveryMode;
 }
 
@@ -791,6 +830,7 @@ export interface ChatMessage {
   cost?: number;
   quotaSnapshots?: QuotaSnapshots;
   copilotUsage?: CopilotUsageItem[];
+  attachments?: Attachment[];
 }
 
 // ─── Tool call tracking ─────────────────────────────────────────────────────
@@ -853,6 +893,8 @@ export interface NewSessionConfig {
   mcpServers?: McpServerDefinition[];
   disabledSkills?: string[];
   customAgents?: CustomAgentDefinition[];
+  infiniteSessions?: InfiniteSessionsSettings;
+  provider?: ProviderDefinition;
 }
 
 // ─── Settings (persisted to localStorage) ───────────────────────────────────
@@ -867,6 +909,8 @@ export interface PersistedSettings {
   mcpServers?: McpServerDefinition[];
   disabledSkills?: string[];
   customAgents?: CustomAgentDefinition[];
+  infiniteSessions?: InfiniteSessionsSettings;
+  provider?: ProviderDefinition;
 }
 
 // ─── Custom agent definitions ───────────────────────────────────────────────

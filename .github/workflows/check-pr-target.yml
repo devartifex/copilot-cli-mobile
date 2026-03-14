@@ -1,0 +1,44 @@
+name: Check PR Target Branch
+
+on:
+  pull_request:
+    types: [opened, reopened, edited]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  check-target:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject PR targeting unsupported branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const allowedBases = new Set(['main', 'master']);
+            const baseRef = context.payload.pull_request?.base?.ref;
+
+            if (allowedBases.has(baseRef)) {
+              core.info(`PR targets allowed branch: ${baseRef}`);
+              return;
+            }
+
+            const body = [
+              '⚠️ **This PR targets an unsupported base branch.**',
+              '',
+              `This repository only accepts PRs targeting \`main\` or \`master\`, but this PR targets \`${baseRef}\`.`,
+              'Please update the base branch before requesting review.',
+              '',
+              'You can change the base branch using the **Edit** button at the top of this PR,',
+              `or run: \`gh pr edit ${{ github.event.pull_request.number }} --base main\``
+            ].join('\n');
+
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              event: 'REQUEST_CHANGES',
+              body
+            });
+
+            core.setFailed(`PRs must target main or master. Received: ${baseRef}`);

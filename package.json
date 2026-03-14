@@ -1,6 +1,6 @@
 {
   "name": "copilot-unleashed",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Copilot Unleashed — Self-hosted multi-model AI chat powered by the GitHub Copilot SDK",
   "main": "build/index.js",
   "scripts": {

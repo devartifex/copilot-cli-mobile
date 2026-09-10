@@ -40,7 +40,7 @@
   "dependencies": {
     "@github/copilot-sdk": "^1.0.5",
     "@sveltejs/adapter-node": "^5.5.7",
-    "@sveltejs/kit": "^2.68.0",
+    "@sveltejs/kit": "^2.70.3",
     "dompurify": "^3.4.11",
     "express-session": "^1.18.0",
     "highlight.js": "^11.11.1",

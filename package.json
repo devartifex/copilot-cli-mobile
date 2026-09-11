@@ -74,7 +74,7 @@
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.0.7",
-    "sharp": "^0.35.1",
+    "sharp": "^0.35.4",
     "svelte-check": "^4.6.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.3"
